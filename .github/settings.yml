@@ -4,7 +4,7 @@
 
 repository:
   name: mlkem-c-embedded
-  description: mlkem-c-embedded
+  description: MLKEM implementation optimized for embedded microcontrollers
   homepage: https://github.com/pq-code-package/mlkem-c-embedded
   default_branch: main
   has_downloads: false
