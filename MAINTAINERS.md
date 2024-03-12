@@ -1,11 +1,10 @@
 [//]: # (SPDX-License-Identifier: CC-BY-4.0)
-[//]: # (TODO Update list of maintainers)
 
 # Maintainers
 
 ## Active Maintainers
 
-| Name                    | GitHub                                    | Chat           | Affliation
-|-------------------------|-------------------------------------------|----------------|----------------------
-| Nigel Jones             | [planetf1](https://github.com/planetf1)   | planetf1       | IBM
+| Name                    | GitHub                                            | Chat           | Affiliation
+|-------------------------|---------------------------------------------------|----------------|----------------------
+| Matthias J. Kannwischer | [mkannwischer](https://github.com/mkannwischer)   | mkannwischer   | Chelpis Quantum Tech
 
