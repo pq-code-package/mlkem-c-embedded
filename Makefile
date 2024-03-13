@@ -1,32 +1,29 @@
 # SPDX-License-Identifier: Apache-2.0
 # temporary Makefile to be replaced by Arm cross-compilation
 
-CC ?= /usr/bin/cc
-CFLAGS += -Wall -Wextra -Wpedantic -Wmissing-prototypes -Wredundant-decls \
-  -Wshadow -Wpointer-arith -O3 -fomit-frame-pointer \
-  -Imlkem -Ifips202
+.PHONY: all
 
-MLKEM_SOURCES = $(wildcard mlkem/*.c)
-MLKEM_HEADERS = $(wildcard mlkem/*.h)
+all: mlkem512-test mlkem768-test mlkem1024-test
 
-FIPS202_SOURCES = $(wildcard fips202/*.c)
-FIPS202_HEADERS = $(wildcard fips202/*.h)
+mlkem512-test: CPPFLAGS += -DKYBER_K=2
+mlkem512-test: bin/mlkem512-test.hex
 
-SOURCES = $(MLKEM_SOURCES) $(FIPS202_SOURCES)
-HEADERS = $(MLKEM_HEADERS) $(FIPS202_HEADERS)
+mlkem768-test: CPPFLAGS += -DKYBER_K=3
+mlkem768-test: bin/mlkem768-test.hex
 
-.PHONY: all clean
+mlkem1024-test: CPPFLAGS += -DKYBER_K=4
+mlkem1024-test: bin/mlkem1024-test.hex
 
-all: mlkem-512-test mlkem-768-test mlkem-1024-test
+include mk/config.mk
+include mk/rules.mk
 
-mlkem-512-test: test/test.c $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) -DKYBER_K=2 $< $(SOURCES) -o $@
+.PHONY: clean libclean
 
-mlkem-768-test: test/test.c $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) -DKYBER_K=3 $< $(SOURCES) -o $@
+clean:
+	rm -rf elf/
+	rm -rf bin/
+	rm -rf obj/
 
-mlkem-1024-test: test/test.c $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) -DKYBER_K=4 $< $(SOURCES) -o $@
+distclean: libclean clean
 
-clean: 
-	$(RM) mlkem-512-test mlkem-768-test mlkem-1024-test
+.SECONDARY:
