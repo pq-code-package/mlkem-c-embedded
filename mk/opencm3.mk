@@ -1,4 +1,4 @@
-LIBHAL_SRC := hal/hal-opencm3.c 
+LIBHAL_SRC := hal/hal-opencm3.c hal/randombytes.c
 
 obj/libpqm4hal.a: $(call objs,$(LIBHAL_SRC))
 
