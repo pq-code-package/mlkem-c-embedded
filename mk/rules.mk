@@ -7,6 +7,7 @@ KEM_SCHEMES = mlkem512 mlkem768 mlkem1024
 
 define scheme-elf
 elf/$(1)-test.elf: obj/test/$(1)-test.o $(call OBJS,$(1)) $(LINKDEPS)
+elf/$(1)-speed.elf: obj/test/$(1)-speed.o $(call OBJS,$(1)) $(LINKDEPS)
 endef
 
 define compile-obj
@@ -20,8 +21,11 @@ obj/$(1)/%.o: mlkem/%.c
 	$$(compile-obj)
 endef
 
-define scheme-test
+define scheme-test-obj
 obj/test/$(1)-test.o: test/test.c
+	$$(compile-obj)
+
+obj/test/$(1)-speed.o: test/speed.c
 	$$(compile-obj)
 endef
 
@@ -32,7 +36,7 @@ $(foreach scheme,$(KEM_SCHEMES), \
 	$(eval $(call scheme-obj,$(scheme))))
 
 $(foreach scheme,$(KEM_SCHEMES), \
-	$(eval $(call scheme-test,$(scheme))))
+	$(eval $(call scheme-test-obj,$(scheme))))
 
 elf/%.elf:
 	@echo "  LD      $@"

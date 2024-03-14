@@ -21,3 +21,5 @@ CFLAGS += \
 LDFLAGS += \
 	-Lobj \
 	-Wl,--gc-sections
+
+MUPQ_ITERATIONS ?= 1

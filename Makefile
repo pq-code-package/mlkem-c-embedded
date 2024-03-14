@@ -3,16 +3,19 @@
 
 .PHONY: all
 
-all: mlkem512-test mlkem768-test mlkem1024-test
+all: mlkem512-test mlkem768-test mlkem1024-test mlkem512-speed mlkem768-speed mlkem1024-speed
 
-mlkem512-test: CPPFLAGS += -DKYBER_K=2 -DMUPQ_NAMESPACE=$(MUPQ_NAMESPACE)
-mlkem512-test: bin/mlkem512-test.hex
+define scheme-test
+$(1)-test: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DMUPQ_ITERATIONS=$$(MUPQ_ITERATIONS)
+$(1)-test: bin/$(1)-test.hex
 
-mlkem768-test: CPPFLAGS += -DKYBER_K=3 -DMUPQ_NAMESPACE=$(MUPQ_NAMESPACE)
-mlkem768-test: bin/mlkem768-test.hex
+$(1)-speed: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DMUPQ_ITERATIONS=$$(MUPQ_ITERATIONS)
+$(1)-speed: bin/$(1)-speed.hex
+endef
 
-mlkem1024-test: CPPFLAGS += -DKYBER_K=4 -DMUPQ_NAMESPACE=$(MUPQ_NAMESPACE) 
-mlkem1024-test: bin/mlkem1024-test.hex
+$(eval $(call scheme-test,mlkem512,2))
+$(eval $(call scheme-test,mlkem768,3))
+$(eval $(call scheme-test,mlkem1024,4))
 
 include mk/config.mk
 include mk/rules.mk
