@@ -3,22 +3,15 @@
 
 .PHONY: all
 
-all: mlkem512-test mlkem768-test mlkem1024-test mlkem512-speed mlkem768-speed mlkem1024-speed
+all: test speed
 
-define scheme-test
-$(1)-test: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DMUPQ_ITERATIONS=$$(MUPQ_ITERATIONS)
-$(1)-test: bin/$(1)-test.hex
-
-$(1)-speed: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DMUPQ_ITERATIONS=$$(MUPQ_ITERATIONS)
-$(1)-speed: bin/$(1)-speed.hex
-endef
-
-$(eval $(call scheme-test,mlkem512,2))
-$(eval $(call scheme-test,mlkem768,3))
-$(eval $(call scheme-test,mlkem1024,4))
 
 include mk/config.mk
+include mk/schemes.mk
 include mk/rules.mk
+
+test: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-test)
+speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
 
 .PHONY: clean libclean
 

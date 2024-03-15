@@ -23,3 +23,7 @@ LDFLAGS += \
 	-Wl,--gc-sections
 
 MUPQ_ITERATIONS ?= 1
+
+KEM_SCHEMES=mlkem512 mlkem768 mlkem1024
+# kyber k
+KEM_PARAMS=2 3 4
