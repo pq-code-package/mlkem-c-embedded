@@ -3,3 +3,6 @@
 
 .vscode
 .idea
+obj
+elf
+bin
