@@ -57,7 +57,11 @@ $(OPENCM3_DIR)/lib/lib$(LIBNAME).a:
 
 obj/hal/hal-opencm3.c.o: $(OPENCM3_DIR)/lib/lib$(LIBNAME).a
 
-LDSCRIPT = hal/$(PLATFORM).ld
+LDSCRIPT = obj/generated.$(DEVICE).ld
+$(LDSCRIPT): $(OPENCM3_DIR)/ld/linker.ld.S $(OPENCM3_DIR)/ld/devices.data $(CONFIG)
+	@printf "  GENLNK  $(DEVICE)\n"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CPP) $(ARCH_FLAGS) $(shell $(OPENCM3_DIR)/scripts/genlink.py $(DEVICES_DATA) $(DEVICE) DEFS) -P -E $< -o $@
 
 CROSS_PREFIX ?= arm-none-eabi
 CC := $(CROSS_PREFIX)-gcc
