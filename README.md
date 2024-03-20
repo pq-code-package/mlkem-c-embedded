@@ -53,6 +53,18 @@ If you are a potential consumer of **MLKEM-C-EMBEDDED**, please reach out to us.
 We're interested in hearing the way you are considering using **MLKEM-C-EMBEDDED** and could benefit from additional features.
 If you have specific feature requests, please open an issue.
 
+## Environment Setup
+
+All the develop and build dependencies are specified in [flake.nix](flake.nix). 
+
+- With nix,
+    - `nix develop` would run a bash shell with the develop environment specified in [flake.nix](flake.nix).
+    - It would be more convenient to enable `direnv`. After entering the project root directory, enable `direnv` via `direnv allow`, `direnv` will install all the dependencies and augment your shell for you, this would take a bit longer on the first time entering the directory (if you haven't used direnv before, make sure to [hook it into your shell](https://direnv.net/docs/hook.html) first).
+- If not using nix, then please installed the same version as in `nixpkgs/nixos-23.11` channel.
+
+Utility scripts in `dev-support/bin/` (if use together with `direnv`, then it should be automatically loaded in your shell):
+- `style`: formatting, linting and spell checking files of different file types
+
 ## Running tests and benchmarks
 
 The build system compiles tests and benchmarks for each mlkem parameter set on specified platform (currently only `stm32f4discovery` is supported).
