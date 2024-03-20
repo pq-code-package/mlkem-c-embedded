@@ -3,7 +3,7 @@
 
 .PHONY: all
 
-all: test speed
+all: test speed stack
 
 
 include mk/config.mk
@@ -12,6 +12,7 @@ include mk/rules.mk
 
 test: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-test)
 speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
+stack: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-stack)
 
 .PHONY: clean libclean
 
