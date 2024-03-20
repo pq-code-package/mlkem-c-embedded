@@ -28,8 +28,10 @@ jobs:
     - uses: cachix/install-nix-action@v25
       with:
         nix_path: nixpkgs=${{ steps.nixpkgs.outputs.nixpkgs }}
-    - name: install dependencies
-      shell: nix develop
-      run: astyle --version
     - name: Astyle
-      run: astyle **/*.[ch] --options=.astylerc --dry-run | grep -vq "Formatted"
+      uses: workflow/nix-shell-action@v3.3.0
+      with:
+        flakes-from-devshell: true
+        script: |
+          astyle --version
+          astyle **/*.[ch] --options=.astylerc --dry-run | grep -vq "Formatted"
