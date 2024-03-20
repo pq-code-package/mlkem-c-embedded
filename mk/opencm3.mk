@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 LIBHAL_SRC := hal/hal-opencm3.c hal/randombytes.c
 
 obj/libpqm4hal.a: $(call objs,$(LIBHAL_SRC))

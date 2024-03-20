@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 elf/%.elf:
 	@echo "  LD      $@"
 	$(Q)[ -d $(@D) ] || mkdir -p $(@D)

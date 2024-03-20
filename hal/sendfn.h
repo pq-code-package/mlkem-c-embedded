@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #ifndef SENDFN_H
 #define SENDFN_H
 

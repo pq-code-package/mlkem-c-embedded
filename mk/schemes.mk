@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 MLKEM_SOURCES = $(wildcard mlkem/*.c)
 FIPS202_SOURCES = $(wildcard fips202/*.c)
 
