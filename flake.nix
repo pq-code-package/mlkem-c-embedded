@@ -27,14 +27,20 @@
               direnv
               nix-direnv
 
+              # formatter & linters
+              nixpkgs-fmt
+              shfmt
+              codespell
+              astyle
+
+              # build dependencies
               gcc-arm-embedded-13
               openocd
               python312Packages.pyserial
-              astyle
             ];
 
             shellHook = ''
-              export PATH=$PWD/bin:$PATH
+              export PATH=$PWD/dev-support/bin:$PATH
             '';
           };
         };

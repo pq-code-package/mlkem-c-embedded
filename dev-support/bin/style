@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o errtrace
+set -o nounset
+set -o pipefail
+
+ROOT="$(realpath "$(dirname "$0")"/../../)"
+. "$ROOT/dev-support/bin/log"
+
+info "Formatting nix files"
+nixpkgs-fmt "$ROOT"
+
+info "Formatting shell scripts"
+shfmt -s -w -l -i 2 -ci -fn "$ROOT"
+
+info "Chekcking misspellings"
+codespell --config "$ROOT/.codespellrc" "$ROOT"
+
+info "Checking c files"
+# shellcheck disable=SC2046
+astyle $(git ls-files "$ROOT/*.c" "$ROOT/*.h") --options="$ROOT/.astylerc" --formatted

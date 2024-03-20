@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+RED="$(tput setaf 1)"
+GREEN="$(tput setaf 2)"
+YELLOW3="$(tput setaf 148)"
+BLUE="$(tput setaf 4)"
+GREY54="$(tput setaf 249)"
+NORMAL="$(tput sgr0)"
+
+export RED
+export GREEN
+export YELLOW3
+export BLUE
+export GREY54
+export NORMAL
+# UNDERLINE=$(tput smul)
+
+# export to avoid lsp warning
+export DEBUG="${BLUE}DEBUG"
+export INFO="${GREEN}INFO"
+export WARN="${YELLOW3}WARN"
+export ERROR="${RED}ERROR"
+
+log()
+{
+  local level="${FUNCNAME[1]^^}"
+  printf "%s\t%s\t%b\n" "${GREY54}$(date "+%T")" "${!level}" "${*}"
+}
+
+debug()
+{
+  log "${NORMAL}${*}"
+}
+
+info()
+{
+  log "${NORMAL}${*}"
+}
+
+warn()
+{
+  log "${NORMAL}${*}" 1>&2
+}
+
+error()
+{
+  log "${NORMAL}${*}" 1>&2
+}
