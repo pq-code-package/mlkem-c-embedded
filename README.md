@@ -52,3 +52,25 @@ If you are interested, please contact us, or volunteer for any of the open issue
 If you are a potential consumer of **MLKEM-C-EMBEDDED**, please reach out to us.
 We're interested in hearing the way you are considering using **MLKEM-C-EMBEDDED** and could benefit from additional features.
 If you have specific feature requests, please open an issue.
+
+## Running tests and benchmarks
+
+The build system compiles tests and benchmarks for each mlkem parameter set on specified platform (currently only support `stm32f4discovery`). The ldscript file for the specified platform can also be generated on the fly.
+
+For example,
+- `make obj/generated-stm32f407vg.ld` generated the ldscript for stm32f407 develop board.
+- `make bin/mlkem768-test.hex` assembled hex file for mlkem-768 functional tests.
+- `make bin/mlkem1024-speed.hex` assembled hex file for mlkem-1024 speed benchmark.
+- `make test` assembled all hex files for mlkem functional tests.
+- `make speed` assembled all hex files for mlkem speed benchmark.
+- `make (all)` would assembled and generated all the above targets.
+
+After generating the specified hex files, with `openocd` we are able to flash it onto the develop board:
+```
+    openocd -f hal/stm32f4discovery.cfg -c "program bin/mlkem768-test.hex verify reset exit"
+```
+
+To receive output from the develop board, `pyserial-miniterm` is used:
+```
+    pyserial-miniterm /dev/<tty_device> 38400
+```
