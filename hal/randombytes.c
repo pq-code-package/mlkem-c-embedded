@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "randombytes.h"
 
-#if defined(STM32F2) || defined(STM32F4) || defined(STM32L4R5ZI) && !defined(MPS2_AN386)
-
 #include <libopencm3/stm32/rng.h>
-
-//TODO Maybe we do not want to use the hardware RNG for all randomness, but instead only read a seed and then expand that using fips202.
 
 int randombytes(uint8_t *obuf, size_t len)
 {
@@ -34,5 +30,3 @@ int randombytes(uint8_t *obuf, size_t len)
 
     return 0;
 }
-
-#endif
