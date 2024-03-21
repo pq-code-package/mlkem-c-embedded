@@ -42,3 +42,7 @@ jobs:
             done
             exit 1
           fi
+    - name: Build targets
+      shell: nix develop .#ci -c bash -e {0}
+      run: |
+          make
