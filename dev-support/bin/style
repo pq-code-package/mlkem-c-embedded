@@ -6,17 +6,20 @@ set -o nounset
 set -o pipefail
 
 ROOT="$(realpath "$(dirname "$0")"/../../)"
-. "$ROOT/dev-support/bin/log"
+DEVSUPPORT="$(realpath "$(dirname "$0")"/../)"
+CURDIR="$(realpath "$(dirname "$0")")"
+. "$CURDIR/log"
 
 info "Formatting nix files"
 nixpkgs-fmt "$ROOT"
 
 info "Formatting shell scripts"
-shfmt -s -w -l -i 2 -ci -fn "$ROOT"
+# shellcheck disable=SC2046
+shfmt -s -w -l -i 2 -ci -fn $(shfmt -f $(git grep -l '' :/))
 
 info "Chekcking misspellings"
-codespell --config "$ROOT/.codespellrc" "$ROOT"
+codespell --skip "$ROOT/.direnv,$ROOT/.git,$ROOT/libopencm3" --ignore-words "$DEVSUPPORT/codespell-ignore-words" "$ROOT"
 
-info "Checking c files"
+info "Formatting c files"
 # shellcheck disable=SC2046
-astyle $(git ls-files "$ROOT/*.c" "$ROOT/*.h") --options="$ROOT/.astylerc" --formatted
+astyle $(git ls-files ":/*.c" ":/*.h") --options="$ROOT/.astylerc" --formatted
