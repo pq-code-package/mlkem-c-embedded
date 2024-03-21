@@ -57,13 +57,13 @@ If you have specific feature requests, please open an issue.
 
 All the develop and build dependencies are specified in [flake.nix](flake.nix). 
 
-- With nix,
-    - `nix develop` would run a bash shell with the develop environment specified in [flake.nix](flake.nix).
-    - It would be more convenient to enable `direnv`. After entering the project root directory, enable `direnv` via `direnv allow`, `direnv` will install all the dependencies and augment your shell for you, this would take a bit longer on the first time entering the directory (if you haven't used direnv before, make sure to [hook it into your shell](https://direnv.net/docs/hook.html) first).
-- If not using nix, then please installed the same version as in `nixpkgs/nixos-23.11` channel.
+- Setup with nix,
+    - Running `nix develop` will execute a bash shell with the development environment specified in [flake.nix](flake.nix).
+    - Alternatively, you can enable `direnv` by using `direnv allow`, allowing it to handle the environment setup for you.
 
-Utility scripts in `dev-support/bin/` (if use together with `direnv`, then it should be automatically loaded in your shell):
-- `style`: formatting, linting and spell checking files of different file types
+- If your're not using nix, please ensure you have installed the same version as specified in [flake.nix](flake.nix).
+
+For further details, please refer to [DevSupport](dev-support/)
 
 ## Running tests and benchmarks
 

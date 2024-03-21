@@ -31,12 +31,12 @@
               nixpkgs-fmt
               shfmt
               codespell
-              astyle
+              astyle # 3.4.10
 
               # build dependencies
-              gcc-arm-embedded-13
-              openocd
-              python312Packages.pyserial
+              gcc-arm-embedded-13 # arm-gnu-toolchain-13.2.rel1
+              openocd # 0.12.0
+              python311Packages.pyserial # 3.5
             ];
 
             shellHook = ''
