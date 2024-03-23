@@ -44,52 +44,52 @@ unsigned char sk_a[MUPQ_CRYPTO_SECRETKEYBYTES];
 unsigned int stack_key_gen, stack_encaps, stack_decaps;
 
 #define FILL_STACK()                                                           \
-  p = &a;                                                                      \
-  while (p > &a - canary_size)                                                 \
-    *(p--) = canary;
+    p = &a;                                                                      \
+    while (p > &a - canary_size)                                                 \
+        *(p--) = canary;
 #define CHECK_STACK()                                                          \
-  c = canary_size;                                                             \
-  p = &a - canary_size + 1;                                                    \
-  while (*p == canary && p < &a) {                                             \
-    p++;                                                                       \
-    c--;                                                                       \
-  }
+    c = canary_size;                                                             \
+    p = &a - canary_size + 1;                                                    \
+    while (*p == canary && p < &a) {                                             \
+        p++;                                                                       \
+        c--;                                                                       \
+    }
 
 static int test_keys(void) {
-  // Alice generates a public key
-  hal_spraystack();
-  MUPQ_crypto_kem_keypair(pk, sk_a);
-  stack_key_gen = hal_checkstack();
+    // Alice generates a public key
+    hal_spraystack();
+    MUPQ_crypto_kem_keypair(pk, sk_a);
+    stack_key_gen = hal_checkstack();
 
-  // Bob derives a secret key and creates a response
-  hal_spraystack();
-  MUPQ_crypto_kem_enc(sendb, key_b, pk);
-  stack_encaps = hal_checkstack();
+    // Bob derives a secret key and creates a response
+    hal_spraystack();
+    MUPQ_crypto_kem_enc(sendb, key_b, pk);
+    stack_encaps = hal_checkstack();
 
-  // Alice uses Bobs response to get her secret key
-  hal_spraystack();
-  MUPQ_crypto_kem_dec(key_a, sendb, sk_a);
-  stack_decaps = hal_checkstack();
+    // Alice uses Bobs response to get her secret key
+    hal_spraystack();
+    MUPQ_crypto_kem_dec(key_a, sendb, sk_a);
+    stack_decaps = hal_checkstack();
 
-  if (memcmp(key_a, key_b, MUPQ_CRYPTO_BYTES)){
-    return -1;
-  } else {
-    send_stack_usage("keypair stack usage:", stack_key_gen);
-    send_stack_usage("encaps stack usage:", stack_encaps);
-    send_stack_usage("decaps stack usage:", stack_decaps);
-    hal_send_str("OK KEYS\n");
-    return 0;
-  }
+    if (memcmp(key_a, key_b, MUPQ_CRYPTO_BYTES)) {
+        return -1;
+    } else {
+        send_stack_usage("keypair stack usage:", stack_key_gen);
+        send_stack_usage("encaps stack usage:", stack_encaps);
+        send_stack_usage("decaps stack usage:", stack_decaps);
+        hal_send_str("OK KEYS\n");
+        return 0;
+    }
 }
 
 int main(void) {
-  hal_setup(CLOCK_FAST);
+    hal_setup(CLOCK_FAST);
 
-  // marker for automated benchmarks
-  hal_send_str("==========================");
-  test_keys();
-  // marker for automated benchmarks
-  hal_send_str("#");
+    // marker for automated benchmarks
+    hal_send_str("==========================");
+    test_keys();
+    // marker for automated benchmarks
+    hal_send_str("#");
 
-  return 0;
+    return 0;
 }
