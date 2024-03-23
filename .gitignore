@@ -3,6 +3,7 @@
 
 .vscode
 .idea
+.direnv
 obj
 elf
 bin
