@@ -8,30 +8,9 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     steps:
-    - name: install jq
-      shell: bash
-      run: |
-        if ! (command -v jq) &> /dev/null
-        then
-          sudo apt install -y --no-install-recommends jq
-        fi
     - uses: actions/checkout@v4
-    - id: nixpkgs
-      shell: bash
-      run: |
-        if [ -f flake.lock ]; then
-          nixpkgs="flake:$(cat flake.lock | jq -r '.nodes.nixpkgs.locked // empty | .type + ":" + .owner + "/" + .repo + "/" + .rev')"
-        else
-          nixpkgs=channel:nixos-unstable
-        fi
-        echo "nixpkgs=$nixpkgs" >> "$GITHUB_OUTPUT"
-    - uses: cachix/install-nix-action@v25
-      with:
-        nix_path: nixpkgs=${{ steps.nixpkgs.outputs.nixpkgs }}
-    - name: Prepare nix dev shell
-      shell: nix develop .#ci -c bash -e {0}
-      run: |
-          astyle --version
+    - name: Setup nix
+      uses: ./.github/actions/setup-nix
     - name: Astyle
       shell: nix develop .#ci -c bash -e {0}
       run: |
