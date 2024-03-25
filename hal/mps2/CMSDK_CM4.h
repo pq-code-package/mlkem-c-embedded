@@ -36,14 +36,12 @@
 *
 *******************************************************************************/
 
-
 #ifndef CMSDK_CM4_H
 #define CMSDK_CM4_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /* -------------------------  Interrupt Number Definition  ------------------------ */
 
@@ -94,7 +92,6 @@ typedef enum IRQn {
     PORT0_7_IRQn                  = 31,      /*!<  GPIO Port 0 pin 7 Interrupt                      */
 } IRQn_Type;
 
-
 /*
  * ==========================================================================
  * ----------- Processor and Core Peripheral Section ------------------------
@@ -110,9 +107,7 @@ typedef enum IRQn {
 
 /*@}*/ /* end of group CMSDK_CM4_CMSIS */
 
-
 #include "core_cm4.h"                       /* Cortex-M4 processor and core peripherals           */
-
 
 /******************************************************************************/
 /*                Device Specific Peripheral registers structures             */
@@ -198,7 +193,6 @@ typedef struct {
 
 /*@}*/ /* end of group CMSDK_UART */
 
-
 /*----------------------------- Timer (TIMER) -------------------------------*/
 /** @addtogroup CMSDK_TIMER CMSDK Timer
   @{
@@ -241,7 +235,6 @@ typedef struct {
 #define CMSDK_TIMER_INTCLEAR_Msk            (0x01ul << CMSDK_TIMER_INTCLEAR_Pos)           /*!< CMSDK_TIMER INTCLEAR: INTCLEAR Mask */
 
 /*@}*/ /* end of group CMSDK_TIMER */
-
 
 /*------------- Timer (TIM) --------------------------------------------------*/
 // <g> Timer (TIM)
@@ -442,7 +435,6 @@ typedef struct {
 
 /*@}*/ /* end of group CMSDK_DualTIMER */
 
-
 /*-------------------- General Purpose Input Output (GPIO) -------------------*/
 /** @addtogroup CMSDK_GPIO CMSDK GPIO
   @{
@@ -519,7 +511,6 @@ typedef struct {
 #define CMSDK_GPIO_MASKHIGHBYTE_Msk    (0xFF00ul << CMSDK_GPIO_MASKHIGHBYTE_Pos)  /*!< CMSDK_GPIO MASKHIGHBYTE: MASKHIGHBYTE Mask */
 
 /*@}*/ /* end of group CMSDK_GPIO */
-
 
 /*------------- System Control (SYSCON) --------------------------------------*/
 /** @addtogroup CMSDK_SYSCON CMSDK System Control
@@ -662,9 +653,7 @@ typedef struct {
 #define CMSDK_PL230_ERR_CLR_Pos                    0                                                          /*!< CMSDK_PL230 ERR: CLR Position */
 #define CMSDK_PL230_ERR_CLR_Msk                    (0x00000001ul << CMSDK_PL230_ERR_CLR_Pos)                  /*!< CMSDK_PL230 ERR: CLR Mask */
 
-
 /*@}*/ /* end of group CMSDK_PL230 */
-
 
 /*------------- PrimeCell UART (PL110) --------------------------------------*/
 /** @addtogroup CMSDK_PL110 CMSDK PrimeCell UART
@@ -1097,7 +1086,6 @@ typedef struct {
 #define CMSDK_PL110_DMA_REC_EN_Pos               0                                                   /*!< CMSDK_PL110 DMA_REC_EN: DMA Receive Error Position */
 #define CMSDK_PL110_DMA_REC_EN_Msk               (0x1ul << CMSDK_PL110_DMA_REC_EN_Pos)               /*!< CMSDK_PL110 DMA_REC_EN: DMA Receive Error Mask */
 
-
 /*@}*/ /* end of group  CMSDK_PL110 */
 
 /*------------------- Watchdog ----------------------------------------------*/
@@ -1203,16 +1191,13 @@ typedef struct {
 #define CMSDK_PL061_MODECTRL_HWEN_Pos      0                                              /*!< CMSDK_PL061 MODECTRL_HWEN: Mode Control Hardware Enable Position */
 #define CMSDK_PL061_MODECTRL_HWEN_Msk     (0x1ul << CMSDK_PL061_MODECTRL_HWEN_Pos)        /*!< CMSDK_PL061 MODECTRL_HWEN: Mode Control Hardware Enable Mask */
 
-
 /*@}*/ /* end of group  CMSDK_PL061 */
-
 
 #if defined ( __CC_ARM   )
 #pragma no_anon_unions
 #endif
 
 /*@}*/ /* end of group CMSDK_CM4_Peripherals */
-
 
 /******************************************************************************/
 /*                         Peripheral memory map                              */
@@ -1252,7 +1237,6 @@ typedef struct {
 #define CMSDK_GPIO3_BASE        (CMSDK_AHB_BASE + 0x3000UL)
 #define CMSDK_SYSCTRL_BASE      (CMSDK_AHB_BASE + 0xF000UL)
 /*@}*/ /* end of group CMSDK_CM4_MemoryMap */
-
 
 /******************************************************************************/
 /*                         Peripheral declaration                             */
