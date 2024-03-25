@@ -67,14 +67,15 @@ For further details, please refer to [DevSupport](dev-support/)
 
 ## Running tests and benchmarks
 
-The build system compiles tests and benchmarks for each mlkem parameter set on specified platform (currently only `stm32f4discovery` is supported).
+The build system compiles tests and benchmarks for each mlkem parameter set on specified platform, currently supported platform includes `stm32f4discovery` and `mps2-an386` (could be simulated with the `QEMU` simulator).
+The PLATFORM configuration is optional, with the default platform set to `stm32f4discovery`.
 
 For example,
-- `make bin/mlkem768-test.hex` assembles the `mlkem768` binary performing functional tests.
-- `make bin/mlkem1024-speed.hex` assembles the `mlkem-1024` speed benchmark binary.
-- `make test` assembles all binaries for functional tests.
-- `make speed` assembles all binaries for speed benchmarking
-- `make (all)` assembles all the above targets for all parameter sets.
+- `make [PLATFORM=<PLATFORM_NAME>] bin/mlkem768-test.hex` assembles the `mlkem768` binary performing functional tests.
+- `make [PLATFORM=<PLATFORM_NAME>] bin/mlkem1024-speed.hex` assembles the `mlkem-1024` speed benchmark binary.
+- `make [PLATFORM=<PLATFORM_NAME>] test` assembles all binaries for functional tests.
+- `make [PLATFORM=<PLATFORM_NAME>] speed` assembles all binaries for speed benchmarking
+- `make [PLATFORM=<PLATFORM_NAME>] (all)` assembles all the above targets for all parameter sets.
 
 After generating the specified hex files, you can flash it to the development board using `openocd`. 
 For example,
