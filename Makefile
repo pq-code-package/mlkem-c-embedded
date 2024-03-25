@@ -13,7 +13,15 @@ include mk/rules.mk
 test: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-test)
 speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
 
-.PHONY: clean libclean
+.PHONY: emulate clean libclean
+
+emulate: PLATFORM = mps2-an386
+emulate:
+	@echo $(PLATFORM)
+	$(MAKE) PLATFORM=$(PLATFORM)
+ifdef ELF_FILE
+	qemu-system-arm -machine $(PLATFORM) -nographic -semihosting -kernel $(ELF_FILE)
+endif
 
 clean:
 	rm -rf elf/
