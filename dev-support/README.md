@@ -4,6 +4,16 @@
 
 ## Recommended Prerequisites
 
+### [flake](https://nixos.wiki/wiki/Flakes)
+
+As `flake` is still an experimental feature of nix, `--experimental-features 'nix-command flakes'` is needed for `nix` command.
+
+Add the following to `~/.config/nix/nix.conf` or `/etc/nix/nix.conf` could avoid adding the option every time invoking `nix` command.
+```
+experimental-features = nix-command flakes
+```
+
+
 ### [direnv](https://direnv.net/)
 
 Enabling `direnv` would greatly enhance the development experience. Once enabled, all dependencies will be installed, and the shell will be augmented according to the specifications in [flake.nix](../flake.nix) whenever you enter the project directory from your shell. The initial setup might take a bit longer when entering the project directory for the first time.
