@@ -28,3 +28,8 @@ obj/%.c.o: %.c $(CONFIG)
 	@echo "  CC      $@"
 	$(Q)[ -d $(@D) ] || mkdir -p $(@D)
 	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
+
+obj/%.S.o: %.S $(CONFIG)
+	@echo "  AS      $@"
+	$(Q)[ -d $(@D) ] || mkdir -p $(@D)
+	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
