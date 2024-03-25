@@ -77,6 +77,10 @@ For example,
 - `make [PLATFORM=<PLATFORM_NAME>] speed` assembles all binaries for speed benchmarking
 - `make [PLATFORM=<PLATFORM_NAME>] (all)` assembles all the above targets for all parameter sets.
 
+- `make emulate` emulate `mps2-an386` with `QEMU`
+- `make clean` cleans up intermediate artifacts
+- `make distclean` additionally cleanup the `libopencm3` library
+
 After generating the specified hex files, you can flash it to the development board using `openocd`. 
 For example,
 ```
