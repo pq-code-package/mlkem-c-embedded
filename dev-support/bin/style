@@ -7,7 +7,6 @@ set -o nounset
 set -o pipefail
 
 ROOT="$(realpath "$(dirname "$0")"/../../)"
-DEVSUPPORT="$(realpath "$(dirname "$0")"/../)"
 CURDIR="$(realpath "$(dirname "$0")")"
 . "$CURDIR/log"
 
@@ -19,7 +18,7 @@ info "Formatting shell scripts"
 shfmt -s -w -l -i 2 -ci -fn $(shfmt -f $(git grep -l '' :/))
 
 info "Chekcking misspellings"
-codespell --skip "$ROOT/.direnv,$ROOT/.git,$ROOT/libopencm3" --ignore-words "$DEVSUPPORT/codespell-ignore-words" "$ROOT"
+codespell --skip "$ROOT/.direnv,$ROOT/.git,$ROOT/libopencm3,*.c,*.h" "$ROOT"
 
 info "Formatting c files"
 # shellcheck disable=SC2046

@@ -1,5 +1,0 @@
-[codespell]
-skip = .direnv,.git,libopencm3
-ignore-words = ./dev-support/codespell-ignore-words
-check-filenames =
-check-hidden =

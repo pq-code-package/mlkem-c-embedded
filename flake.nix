@@ -12,11 +12,11 @@
     };
   };
 
-  outputs = inputs@{ flake-parts, nixpkgs, ... }:
+  outputs = inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ ];
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-      perSystem = { pkgs, system, inputs', ... }:
+      perSystem = { pkgs, ... }:
         let
           core = with pkgs; [
             # formatter & linters
@@ -24,8 +24,7 @@
 
             # build dependencies
             gcc-arm-embedded-13 # arm-gnu-toolchain-13.2.rel1
-            openocd # 0.12.0
-            python311Packages.pyserial # 3.5
+            qemu # 8.1.5
           ];
         in
         {
@@ -38,6 +37,10 @@
               nixpkgs-fmt
               shfmt
               codespell
+
+              # debug dependencies
+              openocd # 0.12.0
+              python311Packages.pyserial # 3.5
             ];
 
             shellHook = ''
@@ -58,4 +61,3 @@
       };
     };
 }
-
