@@ -38,9 +38,14 @@ jobs:
       shell: nix develop .#ci -c bash -e {0}
       run: |
           tests=10
-          make emulate NTESTS="$tests"
+          output=$(make emulate NTESTS="$tests")
+          echo "::group::make emulate"
+          echo "$output"
+          echo "::endgroup::"
 
           for file in elf/*.elf; do
+            echo "::group::Emulate $file"
+
             output=$(make emulate ELF_FILE="$file")
             echo "$output"
 
@@ -63,7 +68,11 @@ jobs:
             if [[ $actual != $expect ]]; then
               echo "::error file={"$file"},title={emulate unexpected}::Expected $expect OKs, but received $actual OKs"
               fail=1
+            else
+              echo "Emulate as expected"
             fi
+
+            echo "::endgroup::"
           done
 
           if [[ $fail == 1 ]]; then
