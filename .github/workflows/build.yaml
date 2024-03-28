@@ -40,5 +40,16 @@ jobs:
           make emulate
 
           for file in elf/*.elf; do
-            make emulate ELF_FILE="$file"
+            output=$(make emulate ELF_FILE="$file")
+            echo "$output"
+
+            err=$(echo "$output" | awk '/ERROR/{code=1;print $2} END {exit code}')
+            if [[ $? == 1 ]]; then
+              echo "::error file={"$file"},title={emulate failed}::$err"
+              fail=1
+            fi
           done
+
+          if [[ $fail == 1 ]]; then
+            exit 1
+          fi
