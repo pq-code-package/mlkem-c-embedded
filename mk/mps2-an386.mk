@@ -39,7 +39,7 @@ LDFLAGS += \
 LIBHAL_SRC := \
 	hal/mps2/startup_MPS2.S \
 	hal/hal-mps2.c \
-	hal/randombytes.c
+	hal/notrandombytes.c
 
 obj/libpqm4hal.a: $(call objs,$(LIBHAL_SRC))
 obj/libpqm4hal.a: CPPFLAGS += -Ihal/mps2
