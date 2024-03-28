@@ -37,15 +37,31 @@ jobs:
     - name: Emulate on QEMU
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          make emulate
+          tests=10
+          make emulate NTESTS="$tests"
 
           for file in elf/*.elf; do
             output=$(make emulate ELF_FILE="$file")
             echo "$output"
 
+            # check if error occurred
             err=$(echo "$output" | awk '/ERROR/{code=1;print $2} END {exit code}')
             if [[ $? == 1 ]]; then
               echo "::error file={"$file"},title={emulate failed}::$err"
+              fail=1
+            fi
+
+            # check if num of ok is as expected
+            if [[ "$file" == *"test"* ]]; then
+              expect=$((tests*3))
+            elif [[ "$file" == *"speed"* ]] then
+              expect=$tests
+            fi
+
+            actual=$(echo "$output" | awk 'BEGIN{c=0} /OK/ {c++} END {print c}')
+
+            if [[ $actual != $expect ]]; then
+              echo "::error file={"$file"},title={emulate unexpected}::Expected $expect OKs, but received $actual OKs"
               fail=1
             fi
           done

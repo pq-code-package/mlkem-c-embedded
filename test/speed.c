@@ -36,7 +36,7 @@ int main(void) {
 
     hal_send_str("==========================");
 
-    for (i = 0; i < MUPQ_ITERATIONS; i++) {
+    for (i = 0; i < NTESTS; i++) {
         // Key-pair generation
         t0 = hal_get_time();
         MUPQ_crypto_kem_keypair(pk, sk);

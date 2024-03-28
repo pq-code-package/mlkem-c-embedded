@@ -16,9 +16,9 @@ speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
 .PHONY: emulate clean libclean
 
 emulate: PLATFORM = mps2-an386
+emulate: NTESTS = 10
 emulate:
-	@echo $(PLATFORM)
-	$(MAKE) PLATFORM=$(PLATFORM)
+	$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS)
 ifdef ELF_FILE
 	qemu-system-arm -machine $(PLATFORM) -nographic -semihosting -kernel $(ELF_FILE)
 endif
