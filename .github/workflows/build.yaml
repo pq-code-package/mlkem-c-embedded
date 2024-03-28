@@ -16,9 +16,9 @@ jobs:
     - name: Astyle
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          err=$(astyle $(git ls-files "*.c" "*.h") --options=.astylerc --dry-run --formatted)
+          err=$(astyle $(git ls-files "*.c" "*.h") --options=.astylerc --dry-run --formatted | awk '{print $2}')
           if [[ ${#err} != 0 ]]; then
-            echo "$err" | awk '{split($0,a);print a[2]}' | while IFS= read -r file; do
+            echo "$err" | while IFS= read -r file; do
               echo "::error file={"$file"},title={checking}::Formatted $file"
             done
             exit 1
