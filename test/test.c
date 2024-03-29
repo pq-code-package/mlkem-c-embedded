@@ -5,8 +5,6 @@
 
 #include <string.h>
 
-#define NTESTS 10
-
 // https://stackoverflow.com/a/1489985/1711232
 #define PASTER(x, y) x##y
 #define EVALUATOR(x, y) PASTER(x, y)

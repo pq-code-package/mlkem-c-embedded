@@ -5,10 +5,10 @@ FIPS202_SOURCES = $(wildcard fips202/*.c)
 OBJS = $(call objs,$(addprefix $(1)/,$(notdir $(basename $(MLKEM_SOURCES)))) $(basename $(FIPS202_SOURCES)))
 
 define scheme-test
-$(1)-test: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DMUPQ_ITERATIONS=$$(MUPQ_ITERATIONS)
+$(1)-test: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DNTESTS=$$(NTESTS)
 $(1)-test: bin/$(1)-test.hex
 
-$(1)-speed: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DMUPQ_ITERATIONS=$$(MUPQ_ITERATIONS)
+$(1)-speed: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DNTESTS=$$(NTESTS)
 $(1)-speed: bin/$(1)-speed.hex
 
 $(1)-stack: CPPFLAGS += -DKYBER_K=$(2) -DMUPQ_NAMESPACE=$$(MUPQ_NAMESPACE) -DMUPQ_ITERATIONS=$$(MUPQ_ITERATIONS)

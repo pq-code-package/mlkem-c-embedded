@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 name: Build
 on:
   push:
@@ -8,36 +10,19 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     steps:
-    - name: install jq
-      shell: bash
-      run: |
-        if ! (command -v jq) &> /dev/null
-        then
-          sudo apt install -y --no-install-recommends jq
-        fi
     - uses: actions/checkout@v4
-    - id: nixpkgs
-      shell: bash
-      run: |
-        if [ -f flake.lock ]; then
-          nixpkgs="flake:$(cat flake.lock | jq -r '.nodes.nixpkgs.locked // empty | .type + ":" + .owner + "/" + .repo + "/" + .rev')"
-        else
-          nixpkgs=channel:nixos-unstable
-        fi
-        echo "nixpkgs=$nixpkgs" >> "$GITHUB_OUTPUT"
-    - uses: cachix/install-nix-action@v25
+    - name: Setup nix
+      uses: ./.github/actions/setup-nix
       with:
-        nix_path: nixpkgs=${{ steps.nixpkgs.outputs.nixpkgs }}
-    - name: Prepare nix dev shell
-      shell: nix develop .#ci -c bash -e {0}
-      run: |
+        script: |
           astyle --version
+          arm-none-eabi-gcc --version
     - name: Astyle
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          err=$(astyle $(git ls-files "*.c" "*.h") --options=.astylerc --dry-run --formatted)
+          err=$(astyle $(git ls-files "*.c" "*.h") --options=.astylerc --dry-run --formatted | awk '{print $2}')
           if [[ ${#err} != 0 ]]; then
-            echo "$err" | awk '{split($0,a);print a[2]}' | while IFS= read -r file; do
+            echo "$err" | while IFS= read -r file; do
               echo "::error file={"$file"},title={checking}::Formatted $file"
             done
             exit 1
@@ -46,3 +31,58 @@ jobs:
       shell: nix develop .#ci -c bash -e {0}
       run: |
           make
+
+  emulate_test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup nix
+      uses: ./.github/actions/setup-nix
+      with:
+        script: |
+          arm-none-eabi-gcc --version
+          qemu-system-arm --version
+    - name: Emulate on QEMU
+      shell: nix develop .#ci -c bash -e {0}
+      run: |
+          tests=10
+          output=$(make emulate NTESTS="$tests")
+          echo "::group::make emulate"
+          echo "$output"
+          echo "::endgroup::"
+
+          for file in elf/*.elf; do
+            echo "::group::Emulate $file"
+
+            output=$(make emulate ELF_FILE="$file")
+            echo "$output"
+
+            # check if error occurred
+            err=$(echo "$output" | awk '/ERROR/{code=1;print $2} END {exit code}')
+            if [[ $? == 1 ]]; then
+              echo "::error file={"$file"},title={emulate failed}::$err"
+              fail=1
+            fi
+
+            # check if num of ok is as expected
+            if [[ "$file" == *"test"* ]]; then
+              expect=$((tests*3))
+            elif [[ "$file" == *"speed"* ]] then
+              expect=$tests
+            fi
+
+            actual=$(echo "$output" | awk 'BEGIN{c=0} /OK/ {c++} END {print c}')
+
+            if [[ $actual != $expect ]]; then
+              echo "::error file={"$file"},title={emulate unexpected}::Expected $expect OKs, but received $actual OKs"
+              fail=1
+            else
+              echo "Emulate as expected"
+            fi
+
+            echo "::endgroup::"
+          done
+
+          if [[ $fail == 1 ]]; then
+            exit 1
+          fi
