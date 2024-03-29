@@ -23,7 +23,7 @@ LDFLAGS += \
 	-Lobj \
 	-Wl,--gc-sections
 
-MUPQ_ITERATIONS ?= 1
+NTESTS ?= 1
 
 KEM_SCHEMES=mlkem512 mlkem768 mlkem1024
 # kyber k
