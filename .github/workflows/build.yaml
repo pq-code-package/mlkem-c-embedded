@@ -13,6 +13,10 @@ jobs:
     - uses: actions/checkout@v4
     - name: Setup nix
       uses: ./.github/actions/setup-nix
+      with:
+        script: |
+          astyle --version
+          arm-none-eabi-gcc --version
     - name: Astyle
       shell: nix develop .#ci -c bash -e {0}
       run: |
@@ -34,6 +38,10 @@ jobs:
     - uses: actions/checkout@v4
     - name: Setup nix
       uses: ./.github/actions/setup-nix
+      with:
+        script: |
+          arm-none-eabi-gcc --version
+          qemu-system-arm --version
     - name: Emulate on QEMU
       shell: nix develop .#ci -c bash -e {0}
       run: |
