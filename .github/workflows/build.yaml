@@ -67,7 +67,9 @@ jobs:
             # check if num of ok is as expected
             if [[ "$file" == *"test"* ]]; then
               expect=$((tests*3))
-            elif [[ "$file" == *"speed"* ]] then
+            elif [[ "$file" == *"stack"* ]]; then
+              expect=1
+            else
               expect=$tests
             fi
 
