@@ -12,23 +12,6 @@
 #include "matacc.h"
 
 /*************************************************
- * Name:        unpack_pk
- *
- * Description: De-serialize public key from a byte array;
- *              approximate inverse of pack_pk
- *
- * Arguments:   - polyvec *pk: pointer to output public-key polynomial vector
- *              - uint8_t *seed: pointer to output seed to generate matrix A
- *              - const uint8_t *packedpk: pointer to input serialized public key
- **************************************************/
-static void unpack_pk(polyvec *pk,
-                      uint8_t seed[MLKEM_SYMBYTES],
-                      const uint8_t packedpk[MLKEM_INDCPA_PUBLICKEYBYTES]) {
-    polyvec_frombytes(pk, packedpk);
-    memcpy(seed, packedpk + MLKEM_POLYVECBYTES, MLKEM_SYMBYTES);
-}
-
-/*************************************************
  * Name:        pack_sk
  *
  * Description: Serialize the secret key
@@ -50,22 +33,6 @@ static void pack_sk(uint8_t r[MLKEM_INDCPA_SECRETKEYBYTES], polyvec *sk) {
  **************************************************/
 static void unpack_sk(polyvec *sk, const uint8_t packedsk[MLKEM_INDCPA_SECRETKEYBYTES]) {
     polyvec_frombytes(sk, packedsk);
-}
-
-/*************************************************
- * Name:        pack_ciphertext
- *
- * Description: Serialize the ciphertext as concatenation of the
- *              compressed and serialized vector of polynomials b
- *              and the compressed and serialized polynomial v
- *
- * Arguments:   uint8_t *r: pointer to the output serialized ciphertext
- *              poly *pk: pointer to the input vector of polynomials b
- *              poly *v: pointer to the input polynomial v
- **************************************************/
-static void pack_ciphertext(uint8_t r[MLKEM_INDCPA_BYTES], polyvec *b, poly *v) {
-    polyvec_compress(r, b);
-    poly_compress(r + MLKEM_POLYVECCOMPRESSEDBYTES, v);
 }
 
 /*************************************************
@@ -236,43 +203,46 @@ void indcpa_enc(uint8_t c[MLKEM_INDCPA_BYTES],
                 const uint8_t m[MLKEM_INDCPA_MSGBYTES],
                 const uint8_t pk[MLKEM_INDCPA_PUBLICKEYBYTES],
                 const uint8_t coins[MLKEM_SYMBYTES]) {
-    unsigned int i;
-    uint8_t seed[MLKEM_SYMBYTES];
-    uint8_t nonce = 0;
-    polyvec sp, pkpv, ep, at[MLKEM_K], b;
-    poly v, k, epp;
-
-    unpack_pk(&pkpv, seed, pk);
-    poly_frommsg(&k, m);
-    gen_at(at, seed);
+    polyvec sp;
+    poly b;
+    poly *pkp = &b;
+    poly *k = &b;
+    poly *v = &sp.vec[0];
+    const unsigned char *seed = pk + MLKEM_POLYVECBYTES;
+    int i;
+    unsigned char nonce = 0;
 
     for (i = 0; i < MLKEM_K; i++) {
         poly_getnoise_eta1(sp.vec + i, coins, nonce++);
     }
-    for (i = 0; i < MLKEM_K; i++) {
-        poly_getnoise_eta2(ep.vec + i, coins, nonce++);
-    }
-    poly_getnoise_eta2(&epp, coins, nonce++);
 
     polyvec_ntt(&sp);
 
     // matrix-vector multiplication
     for (i = 0; i < MLKEM_K; i++) {
-        polyvec_basemul_acc_montgomery(&b.vec[i], &at[i], &sp);
+        matacc(&b, &sp, i, seed, 1);
+        poly_invntt_tomont(&b);
+
+        poly_addnoise_eta2(&b, coins, nonce++);
+        poly_reduce(&b);
+
+        poly_packcompress(c, &b, i);
     }
 
-    polyvec_basemul_acc_montgomery(&v, &pkpv, &sp);
+    poly_frombytes(pkp, pk);
+    poly_basemul(v, pkp, &sp.vec[0]);
+    for (i = 1 ; i < MLKEM_K; i++) {
+        poly_frombytes(pkp, pk + i * MLKEM_POLYBYTES);
+        poly_basemul_acc(v, pkp, &sp.vec[i]);
+    }
+    poly_invntt_tomont(v);
+    poly_addnoise_eta2(v, coins, nonce++);
 
-    polyvec_invntt_tomont(&b);
-    poly_invntt_tomont(&v);
+    poly_frommsg(k, m);
+    poly_add(v, v, k);
+    poly_reduce(v);
 
-    polyvec_add(&b, &b, &ep);
-    poly_add(&v, &v, &epp);
-    poly_add(&v, &v, &k);
-    polyvec_reduce(&b);
-    poly_reduce(&v);
-
-    pack_ciphertext(c, &b, &v);
+    poly_compress(c + MLKEM_POLYVECCOMPRESSEDBYTES, v);
 }
 
 /*************************************************

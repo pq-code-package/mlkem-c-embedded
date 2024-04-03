@@ -119,9 +119,9 @@ void poly_cbd_eta1(poly *r, const uint8_t buf[MLKEM_ETA1 * MLKEM_N / 4], int add
     #endif
 }
 
-void poly_cbd_eta2(poly *r, const uint8_t buf[MLKEM_ETA2 * MLKEM_N / 4]) {
+void poly_cbd_eta2(poly *r, const uint8_t buf[MLKEM_ETA2 * MLKEM_N / 4], int add) {
     #if MLKEM_ETA2 == 2
-    cbd2(r, buf, 0);
+    cbd2(r, buf, add);
     #else
 #error "This implementation requires eta2 = 2"
     #endif

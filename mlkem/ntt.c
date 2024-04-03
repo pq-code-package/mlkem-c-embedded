@@ -139,11 +139,17 @@ void invntt(int16_t r[256]) {
 *              - int16_t zeta: integer defining the reduction polynomial
 **************************************************/
 void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta) {
-    r[0]  = fqmul(a[1], b[1]);
+    // copy to allow overlap between r and a,b
+    int16_t a0 = a[0];
+    int16_t a1 = a[1];
+    int16_t b0 = b[0];
+    int16_t b1 = b[1];
+
+    r[0]  = fqmul(a1, b1);
     r[0]  = fqmul(r[0], zeta);
-    r[0] += fqmul(a[0], b[0]);
-    r[1]  = fqmul(a[0], b[1]);
-    r[1] += fqmul(a[1], b[0]);
+    r[0] += fqmul(a0, b0);
+    r[1]  = fqmul(a0, b1);
+    r[1] += fqmul(a1, b0);
 }
 
 /*************************************************
@@ -159,9 +165,15 @@ void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta)
 *              - int16_t zeta: integer defining the reduction polynomial
 **************************************************/
 void basemul_acc(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta) {
-    int16_t t  = fqmul(a[1], b[1]);
+    // copy to allow overlap between r and a,b
+    int16_t a0 = a[0];
+    int16_t a1 = a[1];
+    int16_t b0 = b[0];
+    int16_t b1 = b[1];
+
+    int16_t t  = fqmul(a1, b1);
     r[0]  += fqmul(t, zeta);
-    r[0]  += fqmul(a[0], b[0]);
-    r[1]  += fqmul(a[0], b[1]);
-    r[1]  += fqmul(a[1], b[0]);
+    r[0]  += fqmul(a0, b0);
+    r[1]  += fqmul(a0, b1);
+    r[1]  += fqmul(a1, b0);
 }
