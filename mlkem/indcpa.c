@@ -258,21 +258,77 @@ void indcpa_enc(uint8_t c[MLKEM_INDCPA_BYTES],
  *              - const uint8_t *sk: pointer to input secret key
  *                                   (of length MLKEM_INDCPA_SECRETKEYBYTES)
  **************************************************/
-void indcpa_dec(uint8_t m[MLKEM_INDCPA_MSGBYTES],
-                const uint8_t c[MLKEM_INDCPA_BYTES],
-                const uint8_t sk[MLKEM_INDCPA_SECRETKEYBYTES]) {
-    polyvec b, skpv;
-    poly v, mp;
+void __attribute__ ((noinline)) indcpa_dec(uint8_t m[MLKEM_INDCPA_MSGBYTES],
+        const uint8_t c[MLKEM_INDCPA_BYTES],
+        const uint8_t sk[MLKEM_INDCPA_SECRETKEYBYTES]) {
+    poly mp, bp;
+    poly *v = &bp;
 
-    unpack_ciphertext(&b, &v, c);
-    unpack_sk(&skpv, sk);
+    poly_unpackdecompress(&bp, c, 0);
+    poly_ntt(&bp);
+    poly_frombytes_basemul(&mp, &bp, sk);
 
-    polyvec_ntt(&b);
-    polyvec_basemul_acc_montgomery(&mp, &skpv, &b);
+    for (int i = 1; i < MLKEM_K; i++) {
+        poly_unpackdecompress(&bp, c, i);
+        poly_ntt(&bp);
+        poly_frombytes_basemul_acc(&mp,  &bp, sk + i * MLKEM_POLYBYTES);
+    }
     poly_invntt_tomont(&mp);
 
-    poly_sub(&mp, &v, &mp);
+    poly_decompress(v, c + MLKEM_POLYVECCOMPRESSEDBYTES);
+    poly_sub(&mp, v, &mp);
     poly_reduce(&mp);
 
     poly_tomsg(m, &mp);
+}
+
+unsigned char indcpa_enc_cmp(const unsigned char *ct,
+                             const unsigned char *m,
+                             const unsigned char *pk,
+                             const unsigned char *coins) {
+    uint64_t rc = 0;
+    polyvec sp;
+    poly b;
+    poly *pkp = &b;
+    poly *k = &b;
+    poly *v = &sp.vec[0];
+    const unsigned char *seed = pk + MLKEM_POLYVECBYTES;
+    int i;
+    unsigned char nonce = 0;
+
+    for (i = 0; i < MLKEM_K; i++) {
+        poly_getnoise_eta1(sp.vec + i, coins, nonce++);
+    }
+
+    polyvec_ntt(&sp);
+
+    // matrix-vector multiplication
+    for (i = 0; i < MLKEM_K; i++) {
+        matacc(&b, &sp, i, seed, 1);
+        poly_invntt_tomont(&b);
+
+        poly_addnoise_eta2(&b, coins, nonce++);
+        poly_reduce(&b);
+
+        rc |= cmp_poly_packcompress(ct, &b, i);
+    }
+
+    poly_frombytes(pkp, pk);
+    poly_basemul(v, pkp, &sp.vec[0]);
+    for (i = 1 ; i < MLKEM_K; i++) {
+        poly_frombytes(pkp, pk + i * MLKEM_POLYBYTES);
+        poly_basemul_acc(v, pkp, &sp.vec[i]);
+    }
+    poly_invntt_tomont(v);
+    poly_addnoise_eta2(v, coins, nonce++);
+
+    poly_frommsg(k, m);
+    poly_add(v, v, k);
+    poly_reduce(v);
+
+    rc |= cmp_poly_compress(ct + MLKEM_POLYVECCOMPRESSEDBYTES, v);
+
+    rc = ~rc + 1;
+    rc >>= 63;
+    return (unsigned char)rc;
 }

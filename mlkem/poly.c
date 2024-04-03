@@ -181,6 +181,173 @@ void poly_packcompress(unsigned char *r, poly *a, int i) {
 }
 
 /*************************************************
+* Name:        poly_unpackdecompress
+*
+* Description: Deserialization and subsequent compression of a polynomial of a polyvec,
+*              Used to uncompress a polyvec one poly at a time in a loop.
+*
+* Arguments:   - const poly *r:     pointer to output polynomial
+*              - unsigned char *a:  pointer to input byte string representation of a polyvec (of length MLKEM_POLYVECCOMPRESSEDBYTES)
+*              - int i:             index of poly in polyvec to decompress
+**************************************************/
+void poly_unpackdecompress(poly *r, const unsigned char *a, int i) {
+    int j;
+    #if (MLKEM_POLYVECCOMPRESSEDBYTES == (MLKEM_K * 352))
+    for (j = 0; j < MLKEM_N / 8; j++) {
+        r->coeffs[8 * j + 0] =  (((a[352 * i + 11 * j + 0]       | (((uint32_t)a[352 * i + 11 * j + 1] & 0x07) << 8)) * MLKEM_Q) + 1024) >> 11;
+        r->coeffs[8 * j + 1] = ((((a[352 * i + 11 * j + 1] >> 3) | (((uint32_t)a[352 * i + 11 * j + 2] & 0x3f) << 5)) * MLKEM_Q) + 1024) >> 11;
+        r->coeffs[8 * j + 2] = ((((a[352 * i + 11 * j + 2] >> 6) | (((uint32_t)a[352 * i + 11 * j + 3] & 0xff) << 2) | (((uint32_t)a[352 * i + 11 * j + 4] & 0x01) << 10)) * MLKEM_Q) + 1024) >> 11;
+        r->coeffs[8 * j + 3] = ((((a[352 * i + 11 * j + 4] >> 1) | (((uint32_t)a[352 * i + 11 * j + 5] & 0x0f) << 7)) * MLKEM_Q) + 1024) >> 11;
+        r->coeffs[8 * j + 4] = ((((a[352 * i + 11 * j + 5] >> 4) | (((uint32_t)a[352 * i + 11 * j + 6] & 0x7f) << 4)) * MLKEM_Q) + 1024) >> 11;
+        r->coeffs[8 * j + 5] = ((((a[352 * i + 11 * j + 6] >> 7) | (((uint32_t)a[352 * i + 11 * j + 7] & 0xff) << 1) | (((uint32_t)a[352 * i + 11 * j + 8] & 0x03) <<  9)) * MLKEM_Q) + 1024) >> 11;
+        r->coeffs[8 * j + 6] = ((((a[352 * i + 11 * j + 8] >> 2) | (((uint32_t)a[352 * i + 11 * j + 9] & 0x1f) << 6)) * MLKEM_Q) + 1024) >> 11;
+        r->coeffs[8 * j + 7] = ((((a[352 * i + 11 * j + 9] >> 5) | (((uint32_t)a[352 * i + 11 * j + 10] & 0xff) << 3)) * MLKEM_Q) + 1024) >> 11;
+    }
+    #elif (MLKEM_POLYVECCOMPRESSEDBYTES == (MLKEM_K * 320))
+    for (j = 0; j < MLKEM_N / 4; j++) {
+        r->coeffs[4 * j + 0] =  (((a[320 * i + 5 * j + 0]       | (((uint32_t)a[320 * i + 5 * j + 1] & 0x03) << 8)) * MLKEM_Q) + 512) >> 10;
+        r->coeffs[4 * j + 1] = ((((a[320 * i + 5 * j + 1] >> 2) | (((uint32_t)a[320 * i + 5 * j + 2] & 0x0f) << 6)) * MLKEM_Q) + 512) >> 10;
+        r->coeffs[4 * j + 2] = ((((a[320 * i + 5 * j + 2] >> 4) | (((uint32_t)a[320 * i + 5 * j + 3] & 0x3f) << 4)) * MLKEM_Q) + 512) >> 10;
+        r->coeffs[4 * j + 3] = ((((a[320 * i + 5 * j + 3] >> 6) | (((uint32_t)a[320 * i + 5 * j + 4] & 0xff) << 2)) * MLKEM_Q) + 512) >> 10;
+    }
+    #else
+#error "MLKEM_POLYVECCOMPRESSEDBYTES needs to be in {320*MLKEM_K, 352*MLKEM_K}"
+    #endif
+}
+
+/*************************************************
+* Name:        cmp_poly_compress
+*
+* Description: Serializes and consequently compares polynomial to a serialized polynomial
+*
+* Arguments:   - const unsigned char *r:    pointer to serialized polynomial to compare with
+*              - poly *a:                   pointer to input polynomial to serialize and compare
+* Returns:                                  boolean indicating whether the polynomials are equal
+**************************************************/
+int cmp_poly_compress(const unsigned char *r, poly *a) {
+    unsigned char rc = 0;
+    int16_t u;
+    uint32_t d0;
+    uint8_t t[8];
+    int i, j, k = 0;
+
+    #if (MLKEM_POLYCOMPRESSEDBYTES == 128)
+    for (i = 0; i < MLKEM_N / 8; i++) {
+        for (j = 0; j < 8; j++) {
+            // map to positive standard representatives
+            u  = a->coeffs[8 * i + j];
+            u += (u >> 15) & MLKEM_Q;
+            /*    t[j] = ((((uint16_t)u << 4) + MLKEM_Q/2)/MLKEM_Q) & 15; */
+            d0 = u << 4;
+            d0 += 1665;
+            d0 *= 80635;
+            d0 >>= 28;
+            t[j] = d0 & 0xf;
+        }
+        rc |= r[k]      ^ (t[0] | (t[1] << 4));
+        rc |= r[k + 1]  ^ (t[2] | (t[3] << 4));
+        rc |= r[k + 2]  ^ (t[4] | (t[5] << 4));
+        rc |= r[k + 3]  ^ (t[6] | (t[7] << 4));
+        k += 4;
+    }
+    #elif (MLKEM_POLYCOMPRESSEDBYTES == 160)
+    for (i = 0; i < MLKEM_N / 8; i++) {
+        for (j = 0; j < 8; j++) {
+            // map to positive standard representatives
+            u  = a->coeffs[8 * i + j];
+            u += (u >> 15) & MLKEM_Q;
+            /*      t[j] = ((((uint32_t)u << 5) + MLKEM_Q/2)/MLKEM_Q) & 31; */
+            d0 = u << 5;
+            d0 += 1664;
+            d0 *= 40318;
+            d0 >>= 27;
+            t[j] = d0 & 0x1f;
+        }
+
+        rc |= r[k]   ^ (t[0]       | (t[1] << 5));
+        rc |= r[k + 1] ^ ((t[1] >> 3) | (t[2] << 2) | (t[3] << 7));
+        rc |= r[k + 2] ^ ((t[3] >> 1) | (t[4] << 4));
+        rc |= r[k + 3] ^ ((t[4] >> 4) | (t[5] << 1) | (t[6] << 6));
+        rc |= r[k + 4] ^ ((t[6] >> 2) | (t[7] << 3));
+        k += 5;
+    }
+    #else
+#error "MLKEM_POLYCOMPRESSEDBYTES needs to be in {128, 160}"
+    #endif
+    return rc;
+}
+
+/*************************************************
+* Name:        cmp_poly_packcompress
+*
+* Description: Serializes and consequently compares poly of polyvec to a serialized polyvec
+*              Should be called in a loop over all poly's of a polyvec.
+*
+* Arguments:   - const unsigned char *r:    pointer to serialized polyvec to compare with
+*              - poly *a:                   pointer to input polynomial of polyvec to serialize and compare
+*              - int i:                     index of poly in polyvec to compare with
+* Returns:                                  boolean indicating whether the polyvecs are equal
+**************************************************/
+int cmp_poly_packcompress(const unsigned char *r, poly *a, int i) {
+    unsigned char rc = 0;
+    int j, k;
+    uint64_t d0;
+
+    #if (MLKEM_POLYVECCOMPRESSEDBYTES == (MLKEM_K * 352))
+    uint16_t t[8];
+    for (j = 0; j < MLKEM_N / 8; j++) {
+        for (k = 0; k < 8; k++) {
+            t[k]  = a->coeffs[8 * j + k];
+            t[k] += ((int16_t)t[k] >> 15) & MLKEM_Q;
+            /*      t[k]  = ((((uint32_t)t[k] << 11) + MLKEM_Q/2)/MLKEM_Q) & 0x7ff; */
+            d0 = t[k];
+            d0 <<= 11;
+            d0 += 1664;
+            d0 *= 645084;
+            d0 >>= 31;
+            t[k] = d0 & 0x7ff;
+        }
+
+        rc |= r[352 * i + 11 * j + 0] ^ (t[0] & 0xff);
+        rc |= r[352 * i + 11 * j + 1] ^ ((t[0] >>  8) | ((t[1] & 0x1f) << 3));
+        rc |= r[352 * i + 11 * j + 2] ^ ((t[1] >>  5) | ((t[2] & 0x03) << 6));
+        rc |= r[352 * i + 11 * j + 3] ^ ((t[2] >>  2) & 0xff);
+        rc |= r[352 * i + 11 * j + 4] ^ ((t[2] >> 10) | ((t[3] & 0x7f) << 1));
+        rc |= r[352 * i + 11 * j + 5] ^ ((t[3] >>  7) | ((t[4] & 0x0f) << 4));
+        rc |= r[352 * i + 11 * j + 6] ^ ((t[4] >>  4) | ((t[5] & 0x01) << 7));
+        rc |= r[352 * i + 11 * j + 7] ^ ((t[5] >>  1) & 0xff);
+        rc |= r[352 * i + 11 * j + 8] ^ ((t[5] >>  9) | ((t[6] & 0x3f) << 2));
+        rc |= r[352 * i + 11 * j + 9] ^ ((t[6] >>  6) | ((t[7] & 0x07) << 5));
+        rc |= r[352 * i + 11 * j + 10] ^ ((t[7] >>  3));
+    }
+    #elif (MLKEM_POLYVECCOMPRESSEDBYTES == (MLKEM_K * 320))
+    uint16_t t[4];
+    for (j = 0; j < MLKEM_N / 4; j++) {
+        for (k = 0; k < 4; k++) {
+            t[k]  = a->coeffs[4 * j + k];
+            t[k] += ((int16_t)t[k] >> 15) & MLKEM_Q;
+            /*      t[k]  = ((((uint32_t)t[k] << 10) + MLKEM_Q/2)/ MLKEM_Q) & 0x3ff; */
+            d0 = t[k];
+            d0 <<= 10;
+            d0 += 1665;
+            d0 *= 1290167;
+            d0 >>= 32;
+            t[k] = d0 & 0x3ff;
+        }
+
+        rc |= r[320 * i + 5 * j + 0] ^ (t[0] & 0xff);
+        rc |= r[320 * i + 5 * j + 1] ^ ((t[0] >>  8) | ((t[1] & 0x3f) << 2));
+        rc |= r[320 * i + 5 * j + 2] ^ (((t[1] >>  6) | ((t[2] & 0x0f) << 4)) & 0xff);
+        rc |= r[320 * i + 5 * j + 3] ^ (((t[2] >>  4) | ((t[3] & 0x03) << 6)) & 0xff);
+        rc |= r[320 * i + 5 * j + 4] ^ ((t[3] >>  2) & 0xff);
+    }
+    #else
+#error "MLKEM_POLYVECCOMPRESSEDBYTES needs to be in {320*MLKEM_K, 352*MLKEM_K}"
+    #endif
+    return rc;
+}
+
+/*************************************************
 * Name:        poly_tobytes
 *
 * Description: Serialization of a polynomial
@@ -220,6 +387,39 @@ void poly_frombytes(poly *r, const uint8_t a[MLKEM_POLYBYTES]) {
     for (i = 0; i < MLKEM_N / 2; i++) {
         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
         r->coeffs[2 * i + 1] = ((a[3 * i + 1] >> 4) | ((uint16_t)a[3 * i + 2] << 4)) & 0xFFF;
+    }
+}
+
+/*************************************************
+* Name:        poly_frombytes_basemul_montgomery
+*
+* Description: Multiplication of a polynomial with a de-serialization of another polynomial;
+*              Conditionally accumulate.
+*
+* Arguments:   - poly *r:                pointer to output polynomial
+*              - const poly *b:          pointer to input polynomial
+*              - const unsigned char *a: pointer to input byte array (of MLKEM_POLYBYTES bytes)
+*              - int add: flag to conditionally accumulate into r if add != 0
+*
+**************************************************/
+
+void poly_frombytes_basemul_montgomery(poly *r, const poly *b, const unsigned char *a, int add) {
+    unsigned int i;
+    int16_t ap[4];
+    for (i = 0; i < MLKEM_N / 4; i++) {
+        ap[0]   = ((a[6 * i + 0] >> 0) | ((uint16_t)a[6 * i + 1] << 8)) & 0xFFF;
+        ap[1] = ((a[6 * i + 1] >> 4) | ((uint16_t)a[6 * i + 2] << 4)) & 0xFFF;
+        ap[2]   = ((a[6 * i + 3] >> 0) | ((uint16_t)a[6 * i + 4] << 8)) & 0xFFF;
+        ap[3] = ((a[6 * i + 4] >> 4) | ((uint16_t)a[6 * i + 5] << 4)) & 0xFFF;
+
+        if (!add) {
+            basemul(&r->coeffs[4 * i], ap, &b->coeffs[4 * i], zetas[64 + i]);
+            basemul(&r->coeffs[4 * i + 2], ap + 2, &b->coeffs[4 * i + 2], -zetas[64 + i]);
+        } else {
+            basemul_acc(&r->coeffs[4 * i], ap, &b->coeffs[4 * i], zetas[64 + i]);
+            basemul_acc(&r->coeffs[4 * i + 2], ap + 2, &b->coeffs[4 * i + 2], -zetas[64 + i]);
+        }
+
     }
 }
 

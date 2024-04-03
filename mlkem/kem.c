@@ -137,6 +137,7 @@ int crypto_kem_enc(uint8_t *ct,
 int crypto_kem_dec(uint8_t *ss,
                    const uint8_t *ct,
                    const uint8_t *sk) {
+    #if 0
     int fail;
     uint8_t buf[2 * MLKEM_SYMBYTES];
     /* Will contain key, coins */
@@ -160,6 +161,31 @@ int crypto_kem_dec(uint8_t *ss,
 
     /* Copy true key to return buffer if fail is false */
     cmov(ss, kr, MLKEM_SYMBYTES, !fail);
+
+    #else
+
+    int fail;
+    uint8_t buf[2 * MLKEM_SYMBYTES];
+    /* Will contain key, coins */
+    uint8_t kr[2 * MLKEM_SYMBYTES];
+    const uint8_t *pk = sk + MLKEM_INDCPA_SECRETKEYBYTES;
+
+    indcpa_dec(buf, ct, sk);
+
+    /* Multitarget countermeasure for coins + contributory KEM */
+    memcpy(buf + MLKEM_SYMBYTES, sk + MLKEM_SECRETKEYBYTES - 2 * MLKEM_SYMBYTES, MLKEM_SYMBYTES);
+    hash_g(kr, buf, 2 * MLKEM_SYMBYTES);
+
+    /* coins are in kr+MLKEM_SYMBYTES */
+    fail = indcpa_enc_cmp(ct, buf, pk, kr + MLKEM_SYMBYTES);
+
+    /* Compute rejection key */
+    rkprf(ss, sk + MLKEM_SECRETKEYBYTES - MLKEM_SYMBYTES, ct);
+
+    /* Copy true key to return buffer if fail is false */
+    cmov(ss, kr, MLKEM_SYMBYTES, (uint8_t) (1 - fail));
+
+    #endif
 
     return 0;
 }

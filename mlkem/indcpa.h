@@ -20,6 +20,12 @@ void indcpa_enc(uint8_t c[MLKEM_INDCPA_BYTES],
                 const uint8_t pk[MLKEM_INDCPA_PUBLICKEYBYTES],
                 const uint8_t coins[MLKEM_SYMBYTES]);
 
+#define indcpa_enc_cmp MLKEM_NAMESPACE(indcpa_enc_cmp)
+unsigned char indcpa_enc_cmp(const unsigned char *ct,
+                             const unsigned char *m,
+                             const unsigned char *pk,
+                             const unsigned char *coins);
+
 #define indcpa_dec MLKEM_NAMESPACE(indcpa_dec)
 void indcpa_dec(uint8_t m[MLKEM_INDCPA_MSGBYTES],
                 const uint8_t c[MLKEM_INDCPA_BYTES],

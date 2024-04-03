@@ -14,6 +14,9 @@
 #define poly_basemul(r, a, b) poly_basemul_montgomery(r, a, b, 0)
 #define poly_basemul_acc(r, a, b) poly_basemul_montgomery(r, a, b, 1)
 
+#define poly_frombytes_basemul(r, a, b) poly_frombytes_basemul_montgomery(r, a, b, 0)
+#define poly_frombytes_basemul_acc(r, a, b) poly_frombytes_basemul_montgomery(r, a, b, 1)
+
 /*
  * Elements of R_q = Z_q[X]/(X^n + 1). Represents polynomial
  * coeffs[0] + X*coeffs[1] + X^2*coeffs[2] + ... + X^{n-1}*coeffs[n-1]
@@ -31,9 +34,19 @@ void poly_decompress(poly *r, const uint8_t a[MLKEM_POLYCOMPRESSEDBYTES]);
 void poly_tobytes(uint8_t r[MLKEM_POLYBYTES], const poly *a);
 #define poly_frombytes MLKEM_NAMESPACE(poly_frombytes)
 void poly_frombytes(poly *r, const uint8_t a[MLKEM_POLYBYTES]);
+#define poly_frombytes_basemul_montgomery MLKEM_NAMESPACE(poly_frombytes_basemul_montgomery)
+void poly_frombytes_basemul_montgomery(poly *r, const poly *b, const unsigned char *a, int acc);
 
 #define poly_packcompress MLKEM_NAMESPACE(poly_packcompress)
 void poly_packcompress(unsigned char *r, poly *a, int i);
+
+#define cmp_poly_compress MLKEM_NAMESPACE(cmp_poly_compress)
+int cmp_poly_compress(const unsigned char *r, poly *a);
+#define cmp_poly_packcompress MLKEM_NAMESPACE(cmp_poly_packcompress)
+int cmp_poly_packcompress(const unsigned char *r, poly *a, int i);
+
+#define poly_unpackdecompress MLKEM_NAMESPACE(poly_unpackdecompress)
+void poly_unpackdecompress(poly *r, const unsigned char *a, int i);
 
 #define poly_frommsg MLKEM_NAMESPACE(poly_frommsg)
 void poly_frommsg(poly *r, const uint8_t msg[MLKEM_INDCPA_MSGBYTES]);
