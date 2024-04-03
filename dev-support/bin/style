@@ -17,9 +17,6 @@ info "Formatting shell scripts"
 # shellcheck disable=SC2046
 shfmt -s -w -l -i 2 -ci -fn $(shfmt -f $(git grep -l '' :/))
 
-info "Chekcking misspellings"
-codespell --skip "$ROOT/.direnv,$ROOT/.git,$ROOT/libopencm3,*.c,*.h" "$ROOT"
-
 info "Formatting c files"
 # shellcheck disable=SC2046
 astyle $(git ls-files ":/*.c" ":/*.h") --options="$ROOT/.astylerc" --formatted

@@ -36,7 +36,6 @@
               # formatter & linters
               nixpkgs-fmt
               shfmt
-              codespell
 
               # debug dependencies
               openocd # 0.12.0
