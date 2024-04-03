@@ -145,3 +145,23 @@ void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta)
     r[1]  = fqmul(a[0], b[1]);
     r[1] += fqmul(a[1], b[0]);
 }
+
+/*************************************************
+* Name:        basemul_acc
+*
+* Description: Multiplication of polynomials in Zq[X]/(X^2-zeta)
+*              used for multiplication of elements in Rq in NTT domain.
+*              Accumulating version
+*
+* Arguments:   - int16_t r[2]: pointer to the output polynomial
+*              - const int16_t a[2]: pointer to the first factor
+*              - const int16_t b[2]: pointer to the second factor
+*              - int16_t zeta: integer defining the reduction polynomial
+**************************************************/
+void basemul_acc(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta) {
+    int16_t t  = fqmul(a[1], b[1]);
+    r[0]  += fqmul(t, zeta);
+    r[0]  += fqmul(a[0], b[0]);
+    r[1]  += fqmul(a[0], b[1]);
+    r[1]  += fqmul(a[1], b[0]);
+}

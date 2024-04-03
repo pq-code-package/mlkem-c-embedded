@@ -53,7 +53,7 @@ static uint32_t load24_littleendian(const uint8_t x[3]) {
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const uint8_t *buf: pointer to input byte array
 **************************************************/
-static void cbd2(poly *r, const uint8_t buf[2 * MLKEM_N / 4]) {
+static void cbd2(poly *r, const uint8_t buf[2 * MLKEM_N / 4], int add) {
     unsigned int i, j;
     uint32_t t, d;
     int16_t a, b;
@@ -66,7 +66,10 @@ static void cbd2(poly *r, const uint8_t buf[2 * MLKEM_N / 4]) {
         for (j = 0; j < 8; j++) {
             a = (d >> (4 * j + 0)) & 0x3;
             b = (d >> (4 * j + 2)) & 0x3;
-            r->coeffs[8 * i + j] = a - b;
+            if (!add) {
+                r->coeffs[8 * i + j] = 0;
+            }
+            r->coeffs[8 * i + j] += a - b;
         }
     }
 }
@@ -83,7 +86,7 @@ static void cbd2(poly *r, const uint8_t buf[2 * MLKEM_N / 4]) {
 *              - const uint8_t *buf: pointer to input byte array
 **************************************************/
 #if MLKEM_ETA1 == 3
-static void cbd3(poly *r, const uint8_t buf[3 * MLKEM_N / 4]) {
+static void cbd3(poly *r, const uint8_t buf[3 * MLKEM_N / 4], int add) {
     unsigned int i, j;
     uint32_t t, d;
     int16_t a, b;
@@ -97,17 +100,20 @@ static void cbd3(poly *r, const uint8_t buf[3 * MLKEM_N / 4]) {
         for (j = 0; j < 4; j++) {
             a = (d >> (6 * j + 0)) & 0x7;
             b = (d >> (6 * j + 3)) & 0x7;
-            r->coeffs[4 * i + j] = a - b;
+            if (!add) {
+                r->coeffs[4 * i + j] = 0;
+            }
+            r->coeffs[4 * i + j] += a - b;
         }
     }
 }
 #endif
 
-void poly_cbd_eta1(poly *r, const uint8_t buf[MLKEM_ETA1 * MLKEM_N / 4]) {
+void poly_cbd_eta1(poly *r, const uint8_t buf[MLKEM_ETA1 * MLKEM_N / 4], int add) {
     #if MLKEM_ETA1 == 2
-    cbd2(r, buf);
+    cbd2(r, buf, add);
     #elif MLKEM_ETA1 == 3
-    cbd3(r, buf);
+    cbd3(r, buf, add);
     #else
 #error "This implementation requires eta1 in {2,3}"
     #endif
@@ -115,7 +121,7 @@ void poly_cbd_eta1(poly *r, const uint8_t buf[MLKEM_ETA1 * MLKEM_N / 4]) {
 
 void poly_cbd_eta2(poly *r, const uint8_t buf[MLKEM_ETA2 * MLKEM_N / 4]) {
     #if MLKEM_ETA2 == 2
-    cbd2(r, buf);
+    cbd2(r, buf, 0);
     #else
 #error "This implementation requires eta2 = 2"
     #endif

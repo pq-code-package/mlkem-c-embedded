@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include "params.h"
 
+#define poly_getnoise_eta1(p, seed, nonce) poly_noise_eta1(p, seed, nonce, 0)
+#define poly_addnoise_eta1(p, seed, nonce) poly_noise_eta1(p, seed, nonce, 1)
+
 /*
  * Elements of R_q = Z_q[X]/(X^n + 1). Represents polynomial
  * coeffs[0] + X*coeffs[1] + X^2*coeffs[2] + ... + X^{n-1}*coeffs[n-1]
@@ -28,8 +31,8 @@ void poly_frommsg(poly *r, const uint8_t msg[MLKEM_INDCPA_MSGBYTES]);
 #define poly_tomsg MLKEM_NAMESPACE(poly_tomsg)
 void poly_tomsg(uint8_t msg[MLKEM_INDCPA_MSGBYTES], const poly *r);
 
-#define poly_getnoise_eta1 MLKEM_NAMESPACE(poly_getnoise_eta1)
-void poly_getnoise_eta1(poly *r, const uint8_t seed[MLKEM_SYMBYTES], uint8_t nonce);
+#define poly_noise_eta1 MLKEM_NAMESPACE(poly_noise_eta1)
+void poly_noise_eta1(poly *r, const unsigned char *seed, unsigned char nonce, int add);
 
 #define poly_getnoise_eta2 MLKEM_NAMESPACE(poly_getnoise_eta2)
 void poly_getnoise_eta2(poly *r, const uint8_t seed[MLKEM_SYMBYTES], uint8_t nonce);
@@ -50,5 +53,7 @@ void poly_reduce(poly *r);
 void poly_add(poly *r, const poly *a, const poly *b);
 #define poly_sub MLKEM_NAMESPACE(poly_sub)
 void poly_sub(poly *r, const poly *a, const poly *b);
+
+void poly_frommont(poly *r);
 
 #endif

@@ -17,4 +17,7 @@ void invntt(int16_t poly[256]);
 #define basemul MLKEM_NAMESPACE(basemul)
 void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta);
 
+#define basemul_acc MLKEM_NAMESPACE(basemul_acc)
+void basemul_acc(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta);
+
 #endif

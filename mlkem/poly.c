@@ -207,21 +207,24 @@ void poly_tomsg(uint8_t msg[MLKEM_INDCPA_MSGBYTES], const poly *a) {
 }
 
 /*************************************************
-* Name:        poly_getnoise_eta1
+* Name:        poly_noise_eta1
 *
 * Description: Sample a polynomial deterministically from a seed and a nonce,
 *              with output polynomial close to centered binomial distribution
-*              with parameter MLKEM_ETA1
+*              with parameter MLKEM_ETA1.
+*              Conditionally accumulate.
 *
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const uint8_t *seed: pointer to input seed
 *                                     (of length MLKEM_SYMBYTES bytes)
 *              - uint8_t nonce: one-byte input nonce
+*              - int add: flag to conditionally accumulate into r if add != 0
 **************************************************/
-void poly_getnoise_eta1(poly *r, const uint8_t seed[MLKEM_SYMBYTES], uint8_t nonce) {
-    uint8_t buf[MLKEM_ETA1 * MLKEM_N / 4];
-    prf(buf, sizeof(buf), seed, nonce);
-    poly_cbd_eta1(r, buf);
+void poly_noise_eta1(poly *r, const unsigned char *seed, unsigned char nonce, int add) {
+    unsigned char buf[MLKEM_ETA1 * MLKEM_N / 4];
+
+    prf(buf, MLKEM_ETA1 * MLKEM_N / 4, seed, nonce);
+    poly_cbd_eta1(r, buf, add);
 }
 
 /*************************************************
@@ -346,5 +349,12 @@ void poly_sub(poly *r, const poly *a, const poly *b) {
     unsigned int i;
     for (i = 0; i < MLKEM_N; i++) {
         r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
+    }
+}
+
+void poly_frommont(poly *r) {
+    unsigned int i;
+    for (i = 0; i < MLKEM_N; i++) {
+        r->coeffs[i] = montgomery_reduce(r->coeffs[i]);
     }
 }
