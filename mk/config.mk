@@ -7,6 +7,7 @@ SRCDIR := $(CURDIR)
 objs = $(addprefix obj/,$(addsuffix .o,$(1)))
 
 PLATFORM ?= stm32f4discovery
+KATRNG ?=
 
 include mk/$(PLATFORM).mk
 

@@ -13,12 +13,16 @@ $(1)-speed: bin/$(1)-speed.hex
 
 $(1)-stack: CPPFLAGS += -DMLKEM_K=$(2)
 $(1)-stack: bin/$(1)-stack.hex
+
+$(1)-nistkat: CPPFLAGS += -DKYBER_K=$(2) -DPQCA_NAMESPACE=$$(PQCA_NAMESPACE)
+$(1)-nistkat: bin/$(1)-nistkat.hex
 endef
 
 define scheme-elf
 elf/$(1)-test.elf: obj/test/$(1)-test.o $(call OBJS,$(1)) $(LINKDEPS)
 elf/$(1)-speed.elf: obj/test/$(1)-speed.o $(call OBJS,$(1)) $(LINKDEPS)
 elf/$(1)-stack.elf: obj/test/$(1)-stack.o $(call OBJS,$(1)) $(LINKDEPS)
+elf/$(1)-nistkat.elf: obj/test/$(1)-nistkat.o $(call OBJS,$(1)) $(LINKDEPS)
 endef
 
 define compile-obj
@@ -40,6 +44,9 @@ obj/test/$(1)-speed.o: test/speed.c
 	$$(compile-obj)
 
 obj/test/$(1)-stack.o: test/stack.c
+	$$(compile-obj)
+
+obj/test/$(1)-nistkat.o: test/nistkat.c
 	$$(compile-obj)
 endef
 

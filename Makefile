@@ -15,6 +15,7 @@ Q ?= @
 test: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-test)
 speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
 stack: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-stack)
+nistkat: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-nistkat)
 
 .PHONY: emulate clean libclean
 

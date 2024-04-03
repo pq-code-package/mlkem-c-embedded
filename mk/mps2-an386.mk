@@ -38,11 +38,21 @@ LDFLAGS += \
 
 LIBHAL_SRC := \
 	hal/mps2/startup_MPS2.S \
-	hal/hal-mps2.c \
-	hal/notrandombytes.c
+	hal/hal-mps2.c
+
+ifndef KATRNG
+	LIBHAL_SRC += hal/notrandombytes.c
+else
+  ifeq ($(KATRNG),NIST)
+    LIBHAL_SRC += \
+	  test/common/nistkatrng.c \
+	  test/common/aes.c
+  endif
+endif
 
 obj/libpqm4hal.a: $(call objs,$(LIBHAL_SRC))
-obj/libpqm4hal.a: CPPFLAGS += -Ihal/mps2
+obj/libpqm4hal.a: CPPFLAGS += -Ihal/mps2 $(if $(KATRNG)==NIST,-Itest/common)
+
 $(LDSCRIPT): CPPFLAGS += $(if $(MPS2_DATA_IN_FLASH),-DDATA_IN_FLASH)
 obj/hal/mps2/startup_MPS2.S.o: CPPFLAGS += $(if $(MPS2_DATA_IN_FLASH),-DDATA_IN_FLASH)
 
@@ -54,6 +64,6 @@ $(LDSCRIPT): hal/mps2/MPS2.ld
 	[ -d $(@D) ] || $(Q)mkdir -p $(@D); \
 	$(CC) -x assembler-with-cpp -E -Wp,-P $(CPPFLAGS) $< -o $@
 
-$(LDSCRIPT): CPPFLAGS += -Ihal/mps2
+$(LDSCRIPT): CPPFLAGS += -Ihal/mps2 $(if $(KATRNG)==NIST,-Itest/common)
 
 LINKDEPS += $(LDSCRIPT) $(LIBDEPS)
