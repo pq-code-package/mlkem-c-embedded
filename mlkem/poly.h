@@ -78,6 +78,4 @@ void poly_add(poly *r, const poly *a, const poly *b);
 #define poly_sub MLKEM_NAMESPACE(poly_sub)
 void poly_sub(poly *r, const poly *a, const poly *b);
 
-void poly_frommont(poly *r);
-
 #endif

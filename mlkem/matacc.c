@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #include "ntt.h"
 #include "poly.h"
 #include "polyvec.h"
@@ -14,6 +15,20 @@ static void doublebasemul(int16_t r[4], const int16_t b[4], const int16_t a[4], 
     }
 }
 
+/*************************************************
+ * Name:        matacc_inner
+ *
+ * Description: Multiplies a polynomial of A or A^T, generated on-the-fly,
+ *              with a polynomials polynomial and accumulates into the result.
+ *
+ * Arguments:   - poly *r:                    pointer to output polynomial to accumulate in
+ *              - poly *b:                    pointer to input polynomial to multiply with
+ *              - unsigned char i:            byte to indicate the index < KYBER_K of the row of A or A^T
+ *              - unsigned char j:            byte to indicate the index < KYBER_K of the column of A or A^T
+ *              - const unsigned char *seed:  pointer to the public seed used to generate A
+ *              - int transposed:             boolean indicating whether A or A^T is generated
+ *              - int add:                    boolean indicating whether this is accumulating into r (add=0 will initialize r to 0)
+ **************************************************/
 static void matacc_inner(poly *r, const poly *b, unsigned char i, unsigned char j, const unsigned char *seed, int transposed, int add) {
     xof_state state;
     unsigned int ctr, ctr2;

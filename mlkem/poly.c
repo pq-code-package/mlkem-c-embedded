@@ -629,10 +629,3 @@ void poly_sub(poly *r, const poly *a, const poly *b) {
         r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
     }
 }
-
-void poly_frommont(poly *r) {
-    unsigned int i;
-    for (i = 0; i < MLKEM_N; i++) {
-        r->coeffs[i] = montgomery_reduce(r->coeffs[i]);
-    }
-}
