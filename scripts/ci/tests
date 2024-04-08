@@ -68,6 +68,11 @@ cal_count()
   awk 'BEGIN{c=0} /OK/ {c++} END {print c}'
 }
 
+cal_sha256()
+{
+  sha256sum | awk '{ print $1 }'
+}
+
 func()
 {
   local TEST_TYPE="test"
@@ -110,6 +115,26 @@ stack()
     }
 
     base_test "$TEST_TYPE" "" expect_proc cal_count
+  )
+}
+
+nistkat()
+{
+  local TEST_TYPE="nistkat"
+  (
+    # shellcheck disable=SC2317
+    expect_proc()
+    {
+      local out
+      # shellcheck disable=SC2016
+      out=$(yq -r --arg scheme "$1" '
+        .implementations.[]
+        | select(.name == $scheme)
+        | ."nistkat-sha256"' "$ROOT/META.yml")
+      echo "$out"
+    }
+
+    base_test "$TEST_TYPE" "" expect_proc cal_sha256
   )
 }
 

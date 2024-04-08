@@ -14,7 +14,7 @@ $(1)-speed: bin/$(1)-speed.hex
 $(1)-stack: CPPFLAGS += -DMLKEM_K=$(2)
 $(1)-stack: bin/$(1)-stack.hex
 
-$(1)-nistkat: CPPFLAGS += -DKYBER_K=$(2) -DPQCA_NAMESPACE=$$(PQCA_NAMESPACE)
+$(1)-nistkat: CPPFLAGS += -DMLKEM_K=$(2)
 $(1)-nistkat: bin/$(1)-nistkat.hex
 endef
 

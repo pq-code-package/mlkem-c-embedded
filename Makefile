@@ -22,6 +22,10 @@ nistkat: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-nistkat)
 emulate%: PLATFORM = mps2-an386
 emulate%: NTESTS = 10
 
+emulate\ nistkat: KATRNG=NIST
+emulate\ nistkat:
+	$(Q)$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS) KATRNG=$(KATRNG) nistkat
+
 # emulate for test, speed, stack
 emulate%:
 	$(Q)$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS) $*
