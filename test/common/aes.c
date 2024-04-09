@@ -561,7 +561,7 @@ void aes128_ecb_keyexp(aes128ctx *r, const unsigned char *key) {
 
     r->sk_exp = malloc(sizeof(uint64_t) * PQC_AES128_STATESIZE);
     if (r->sk_exp == NULL) {
-        exit(111);
+        return;
     }
 
     br_aes_ct64_keysched(skey, key, 16);
@@ -576,7 +576,7 @@ void aes192_ecb_keyexp(aes192ctx *r, const unsigned char *key) {
     uint64_t skey[26];
     r->sk_exp = malloc(sizeof(uint64_t) * PQC_AES192_STATESIZE);
     if (r->sk_exp == NULL) {
-        exit(111);
+        return;
     }
 
     br_aes_ct64_keysched(skey, key, 24);
@@ -591,7 +591,7 @@ void aes256_ecb_keyexp(aes256ctx *r, const unsigned char *key) {
     uint64_t skey[30];
     r->sk_exp = malloc(sizeof(uint64_t) * PQC_AES256_STATESIZE);
     if (r->sk_exp == NULL) {
-        exit(111);
+        return;
     }
 
     br_aes_ct64_keysched(skey, key, 32);
