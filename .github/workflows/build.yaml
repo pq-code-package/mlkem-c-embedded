@@ -42,49 +42,32 @@ jobs:
         script: |
           arm-none-eabi-gcc --version
           qemu-system-arm --version
-    - name: Emulate on QEMU
+    - name: Build for emulation on QEMU
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          tests=10
-          output=$(make emulate NTESTS="$tests")
-          echo "::group::make emulate"
-          echo "$output"
-          echo "::endgroup::"
-
-          for file in elf/*.elf; do
-            echo "::group::Emulate $file"
-
-            output=$(make emulate ELF_FILE="$file")
-            echo "$output"
-
-            # check if error occurred
-            err=$(echo "$output" | awk '/ERROR/{code=1;print $2} END {exit code}')
-            if [[ $? == 1 ]]; then
-              echo "::error file={"$file"},title={emulate failed}::$err"
-              fail=1
-            fi
-
-            # check if num of ok is as expected
-            if [[ "$file" == *"test"* ]]; then
-              expect=$((tests*3))
-            elif [[ "$file" == *"stack"* ]]; then
-              expect=1
-            else
-              expect=$tests
-            fi
-
-            actual=$(echo "$output" | awk 'BEGIN{c=0} /OK/ {c++} END {print c}')
-
-            if [[ $actual != $expect ]]; then
-              echo "::error file={"$file"},title={emulate unexpected}::Expected $expect OKs, but received $actual OKs"
-              fail=1
-            else
-              echo "Emulate as expected"
-            fi
-
-            echo "::endgroup::"
-          done
-
-          if [[ $fail == 1 ]]; then
-            exit 1
+          output=$(make emulate) && true
+          if [[ $? != 0 ]]; then
+            echo "::error title={Build failed}::$output" 1>&2
           fi
+    - name: Functional test
+      id: func_test
+      shell: nix develop .#ci -c bash -e {0}
+      run: |
+          tests func
+    - name: Speed test
+      id: speed_test
+      shell: nix develop .#ci -c bash -e {0}
+      if: |
+        success()
+        || steps.func_test.conclusion == 'failure'
+      run: |
+          tests speed
+    - name: Stack test
+      id: stack_test
+      shell: nix develop .#ci -c bash -e {0}
+      if: |
+        success()
+        || steps.func_test.conclusion == 'failure'
+        || steps.speed_test.conclusion == 'failure'
+      run: |
+          tests stack

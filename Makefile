@@ -10,23 +10,29 @@ include mk/config.mk
 include mk/schemes.mk
 include mk/rules.mk
 
+Q ?= @
+
 test: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-test)
 speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
 stack: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-stack)
 
 .PHONY: emulate clean libclean
 
-emulate: PLATFORM = mps2-an386
-emulate: NTESTS = 10
-emulate:
-	$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS)
-ifdef ELF_FILE
-	qemu-system-arm -machine $(PLATFORM) -nographic -semihosting -kernel $(ELF_FILE)
-endif
+emulate%: PLATFORM = mps2-an386
+emulate%: NTESTS = 10
+
+# emulate for test, speed, stack
+emulate%:
+	$(Q)$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS) $*
+
+emulate\ run: PLATFORM=mps2-an386
+emulate\ run:
+	$(Q)qemu-system-arm -machine $(PLATFORM) -nographic -semihosting -kernel $(ELF_FILE)
+
 
 clean:
-	rm -rf elf/
-	rm -rf bin/
-	rm -rf obj/
+	$(Q)rm -rf elf/
+	$(Q)rm -rf bin/
+	$(Q)rm -rf obj/
 
 distclean: libclean clean
