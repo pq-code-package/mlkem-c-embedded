@@ -6,7 +6,7 @@
 
 /* Code to generate zetas and zetas_inv used in the number-theoretic transform:
 
-#define KYBER_ROOT_OF_UNITY 17
+#define MLKEM_ROOT_OF_UNITY 17
 
 static const uint8_t tree[128] = {
   0, 64, 32, 96, 16, 80, 48, 112, 8, 72, 40, 104, 24, 88, 56, 120,
@@ -25,14 +25,14 @@ void init_ntt() {
 
   tmp[0] = MONT;
   for(i=1;i<128;i++)
-    tmp[i] = fqmul(tmp[i-1],MONT*KYBER_ROOT_OF_UNITY % KYBER_Q);
+    tmp[i] = fqmul(tmp[i-1],MONT*MLKEM_ROOT_OF_UNITY % MLKEM_Q);
 
   for(i=0;i<128;i++) {
     zetas[i] = tmp[tree[i]];
-    if(zetas[i] > KYBER_Q/2)
-      zetas[i] -= KYBER_Q;
-    if(zetas[i] < -KYBER_Q/2)
-      zetas[i] += KYBER_Q;
+    if(zetas[i] > MLKEM_Q/2)
+      zetas[i] -= MLKEM_Q;
+    if(zetas[i] < -MLKEM_Q/2)
+      zetas[i] += MLKEM_Q;
   }
 }
 */
