@@ -5,22 +5,6 @@
 
 #include <string.h>
 
-// https://stackoverflow.com/a/1489985/1711232
-#define PASTER(x, y) x##y
-#define EVALUATOR(x, y) PASTER(x, y)
-#define NAMESPACE(fun) EVALUATOR(MUPQ_NAMESPACE, fun)
-
-// use different names so we can have empty namespaces
-#define MUPQ_CRYPTO_BYTES           NAMESPACE(CRYPTO_BYTES)
-#define MUPQ_CRYPTO_PUBLICKEYBYTES  NAMESPACE(CRYPTO_PUBLICKEYBYTES)
-#define MUPQ_CRYPTO_SECRETKEYBYTES  NAMESPACE(CRYPTO_SECRETKEYBYTES)
-#define MUPQ_CRYPTO_CIPHERTEXTBYTES NAMESPACE(CRYPTO_CIPHERTEXTBYTES)
-#define MUPQ_CRYPTO_ALGNAME NAMESPACE(CRYPTO_ALGNAME)
-
-#define MUPQ_crypto_kem_keypair NAMESPACE(crypto_kem_keypair)
-#define MUPQ_crypto_kem_enc NAMESPACE(crypto_kem_enc)
-#define MUPQ_crypto_kem_dec NAMESPACE(crypto_kem_dec)
-
 const uint8_t canary[8] = {
     0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF
 };
@@ -44,10 +28,10 @@ static int check_canary(const uint8_t *d) {
 }
 
 static int test_keys(void) {
-    unsigned char key_a[MUPQ_CRYPTO_BYTES + 16], key_b[MUPQ_CRYPTO_BYTES + 16];
-    unsigned char pk[MUPQ_CRYPTO_PUBLICKEYBYTES + 16];
-    unsigned char sendb[MUPQ_CRYPTO_CIPHERTEXTBYTES + 16];
-    unsigned char sk_a[MUPQ_CRYPTO_SECRETKEYBYTES + 16];
+    unsigned char key_a[CRYPTO_BYTES + 16], key_b[CRYPTO_BYTES + 16];
+    unsigned char pk[CRYPTO_PUBLICKEYBYTES + 16];
+    unsigned char sendb[CRYPTO_CIPHERTEXTBYTES + 16];
+    unsigned char sk_a[CRYPTO_SECRETKEYBYTES + 16];
 
     write_canary(key_a);
     write_canary(key_a + sizeof(key_a) - 8);
@@ -64,18 +48,18 @@ static int test_keys(void) {
 
     for (i = 0; i < NTESTS; i++) {
         //Alice generates a public key
-        MUPQ_crypto_kem_keypair(pk + 8, sk_a + 8);
+        crypto_kem_keypair(pk + 8, sk_a + 8);
         hal_send_str("DONE key pair generation!");
 
         //Bob derives a secret key and creates a response
-        MUPQ_crypto_kem_enc(sendb + 8, key_b + 8, pk + 8);
+        crypto_kem_enc(sendb + 8, key_b + 8, pk + 8);
         hal_send_str("DONE encapsulation!");
 
         //Alice uses Bobs response to get her secret key
-        MUPQ_crypto_kem_dec(key_a + 8, sendb + 8, sk_a + 8);
+        crypto_kem_dec(key_a + 8, sendb + 8, sk_a + 8);
         hal_send_str("DONE decapsulation!");
 
-        if (memcmp(key_a + 8, key_b + 8, MUPQ_CRYPTO_BYTES)) {
+        if (memcmp(key_a + 8, key_b + 8, CRYPTO_BYTES)) {
             hal_send_str("ERROR KEYS\n");
         } else if (check_canary(key_a) || check_canary(key_a + sizeof(key_a) - 8) ||
                    check_canary(key_b) || check_canary(key_b + sizeof(key_b) - 8) ||
@@ -92,26 +76,26 @@ static int test_keys(void) {
 }
 
 static int test_invalid_sk_a(void) {
-    unsigned char sk_a[MUPQ_CRYPTO_SECRETKEYBYTES];
-    unsigned char key_a[MUPQ_CRYPTO_BYTES], key_b[MUPQ_CRYPTO_BYTES];
-    unsigned char pk[MUPQ_CRYPTO_PUBLICKEYBYTES];
-    unsigned char sendb[MUPQ_CRYPTO_CIPHERTEXTBYTES];
+    unsigned char sk_a[CRYPTO_SECRETKEYBYTES];
+    unsigned char key_a[CRYPTO_BYTES], key_b[CRYPTO_BYTES];
+    unsigned char pk[CRYPTO_PUBLICKEYBYTES];
+    unsigned char sendb[CRYPTO_CIPHERTEXTBYTES];
     int i;
 
     for (i = 0; i < NTESTS; i++) {
         //Alice generates a public key
-        MUPQ_crypto_kem_keypair(pk, sk_a);
+        crypto_kem_keypair(pk, sk_a);
 
         //Bob derives a secret key and creates a response
-        MUPQ_crypto_kem_enc(sendb, key_b, pk);
+        crypto_kem_enc(sendb, key_b, pk);
 
         //Replace secret key with random values
-        randombytes(sk_a, MUPQ_CRYPTO_SECRETKEYBYTES);
+        randombytes(sk_a, CRYPTO_SECRETKEYBYTES);
 
         //Alice uses Bobs response to get her secre key
-        MUPQ_crypto_kem_dec(key_a, sendb, sk_a);
+        crypto_kem_dec(key_a, sendb, sk_a);
 
-        if (!memcmp(key_a, key_b, MUPQ_CRYPTO_BYTES)) {
+        if (!memcmp(key_a, key_b, CRYPTO_BYTES)) {
             hal_send_str("ERROR invalid sk_a\n");
         } else {
             hal_send_str("OK invalid sk_a\n");
@@ -123,10 +107,10 @@ static int test_invalid_sk_a(void) {
 }
 
 static int test_invalid_ciphertext(void) {
-    unsigned char sk_a[MUPQ_CRYPTO_SECRETKEYBYTES];
-    unsigned char key_a[MUPQ_CRYPTO_BYTES], key_b[MUPQ_CRYPTO_BYTES];
-    unsigned char pk[MUPQ_CRYPTO_PUBLICKEYBYTES];
-    unsigned char sendb[MUPQ_CRYPTO_CIPHERTEXTBYTES];
+    unsigned char sk_a[CRYPTO_SECRETKEYBYTES];
+    unsigned char key_a[CRYPTO_BYTES], key_b[CRYPTO_BYTES];
+    unsigned char pk[CRYPTO_PUBLICKEYBYTES];
+    unsigned char sendb[CRYPTO_CIPHERTEXTBYTES];
     int i;
     size_t pos;
 
@@ -134,18 +118,18 @@ static int test_invalid_ciphertext(void) {
         randombytes((unsigned char *)&pos, sizeof(size_t));
 
         //Alice generates a public key
-        MUPQ_crypto_kem_keypair(pk, sk_a);
+        crypto_kem_keypair(pk, sk_a);
 
         //Bob derives a secret key and creates a response
-        MUPQ_crypto_kem_enc(sendb, key_b, pk);
+        crypto_kem_enc(sendb, key_b, pk);
 
         // Change ciphertext to random value
         randombytes(sendb, sizeof(sendb));
 
         //Alice uses Bobs response to get her secret key
-        MUPQ_crypto_kem_dec(key_a, sendb, sk_a);
+        crypto_kem_dec(key_a, sendb, sk_a);
 
-        if (!memcmp(key_a, key_b, MUPQ_CRYPTO_BYTES)) {
+        if (!memcmp(key_a, key_b, CRYPTO_BYTES)) {
             hal_send_str("ERROR invalid ciphertext\n");
         } else {
             hal_send_str("OK invalid ciphertext\n");

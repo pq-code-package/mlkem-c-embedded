@@ -10,21 +10,21 @@
 * Description: Compress and serialize vector of polynomials
 *
 * Arguments:   - uint8_t *r: pointer to output byte array
-*                            (needs space for KYBER_POLYVECCOMPRESSEDBYTES)
+*                            (needs space for MLKEM_POLYVECCOMPRESSEDBYTES)
 *              - const polyvec *a: pointer to input vector of polynomials
 **************************************************/
-void polyvec_compress(uint8_t r[KYBER_POLYVECCOMPRESSEDBYTES], const polyvec *a) {
+void polyvec_compress(uint8_t r[MLKEM_POLYVECCOMPRESSEDBYTES], const polyvec *a) {
     unsigned int i, j, k;
     uint64_t d0;
 
-    #if (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 352))
+    #if (MLKEM_POLYVECCOMPRESSEDBYTES == (MLKEM_K * 352))
     uint16_t t[8];
-    for (i = 0; i < KYBER_K; i++) {
-        for (j = 0; j < KYBER_N / 8; j++) {
+    for (i = 0; i < MLKEM_K; i++) {
+        for (j = 0; j < MLKEM_N / 8; j++) {
             for (k = 0; k < 8; k++) {
                 t[k]  = a->vec[i].coeffs[8 * j + k];
-                t[k] += ((int16_t)t[k] >> 15) & KYBER_Q;
-                /*      t[k]  = ((((uint32_t)t[k] << 11) + KYBER_Q/2)/KYBER_Q) & 0x7ff; */
+                t[k] += ((int16_t)t[k] >> 15) & MLKEM_Q;
+                /*      t[k]  = ((((uint32_t)t[k] << 11) + MLKEM_Q/2)/MLKEM_Q) & 0x7ff; */
                 d0 = t[k];
                 d0 <<= 11;
                 d0 += 1664;
@@ -48,14 +48,14 @@ void polyvec_compress(uint8_t r[KYBER_POLYVECCOMPRESSEDBYTES], const polyvec *a)
             r += 11;
         }
     }
-    #elif (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 320))
+    #elif (MLKEM_POLYVECCOMPRESSEDBYTES == (MLKEM_K * 320))
     uint16_t t[4];
-    for (i = 0; i < KYBER_K; i++) {
-        for (j = 0; j < KYBER_N / 4; j++) {
+    for (i = 0; i < MLKEM_K; i++) {
+        for (j = 0; j < MLKEM_N / 4; j++) {
             for (k = 0; k < 4; k++) {
                 t[k]  = a->vec[i].coeffs[4 * j + k];
-                t[k] += ((int16_t)t[k] >> 15) & KYBER_Q;
-                /*      t[k]  = ((((uint32_t)t[k] << 10) + KYBER_Q/2)/ KYBER_Q) & 0x3ff; */
+                t[k] += ((int16_t)t[k] >> 15) & MLKEM_Q;
+                /*      t[k]  = ((((uint32_t)t[k] << 10) + MLKEM_Q/2)/ MLKEM_Q) & 0x3ff; */
                 d0 = t[k];
                 d0 <<= 10;
                 d0 += 1665;
@@ -73,7 +73,7 @@ void polyvec_compress(uint8_t r[KYBER_POLYVECCOMPRESSEDBYTES], const polyvec *a)
         }
     }
     #else
-#error "KYBER_POLYVECCOMPRESSEDBYTES needs to be in {320*KYBER_K, 352*KYBER_K}"
+#error "MLKEM_POLYVECCOMPRESSEDBYTES needs to be in {320*MLKEM_K, 352*MLKEM_K}"
     #endif
 }
 
@@ -85,15 +85,15 @@ void polyvec_compress(uint8_t r[KYBER_POLYVECCOMPRESSEDBYTES], const polyvec *a)
 *
 * Arguments:   - polyvec *r:       pointer to output vector of polynomials
 *              - const uint8_t *a: pointer to input byte array
-*                                  (of length KYBER_POLYVECCOMPRESSEDBYTES)
+*                                  (of length MLKEM_POLYVECCOMPRESSEDBYTES)
 **************************************************/
-void polyvec_decompress(polyvec *r, const uint8_t a[KYBER_POLYVECCOMPRESSEDBYTES]) {
+void polyvec_decompress(polyvec *r, const uint8_t a[MLKEM_POLYVECCOMPRESSEDBYTES]) {
     unsigned int i, j, k;
 
-    #if (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 352))
+    #if (MLKEM_POLYVECCOMPRESSEDBYTES == (MLKEM_K * 352))
     uint16_t t[8];
-    for (i = 0; i < KYBER_K; i++) {
-        for (j = 0; j < KYBER_N / 8; j++) {
+    for (i = 0; i < MLKEM_K; i++) {
+        for (j = 0; j < MLKEM_N / 8; j++) {
             t[0] = (a[0] >> 0) | ((uint16_t)a[ 1] << 8);
             t[1] = (a[1] >> 3) | ((uint16_t)a[ 2] << 5);
             t[2] = (a[2] >> 6) | ((uint16_t)a[ 3] << 2) | ((uint16_t)a[4] << 10);
@@ -105,14 +105,14 @@ void polyvec_decompress(polyvec *r, const uint8_t a[KYBER_POLYVECCOMPRESSEDBYTES
             a += 11;
 
             for (k = 0; k < 8; k++) {
-                r->vec[i].coeffs[8 * j + k] = ((uint32_t)(t[k] & 0x7FF) * KYBER_Q + 1024) >> 11;
+                r->vec[i].coeffs[8 * j + k] = ((uint32_t)(t[k] & 0x7FF) * MLKEM_Q + 1024) >> 11;
             }
         }
     }
-    #elif (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 320))
+    #elif (MLKEM_POLYVECCOMPRESSEDBYTES == (MLKEM_K * 320))
     uint16_t t[4];
-    for (i = 0; i < KYBER_K; i++) {
-        for (j = 0; j < KYBER_N / 4; j++) {
+    for (i = 0; i < MLKEM_K; i++) {
+        for (j = 0; j < MLKEM_N / 4; j++) {
             t[0] = (a[0] >> 0) | ((uint16_t)a[1] << 8);
             t[1] = (a[1] >> 2) | ((uint16_t)a[2] << 6);
             t[2] = (a[2] >> 4) | ((uint16_t)a[3] << 4);
@@ -120,12 +120,12 @@ void polyvec_decompress(polyvec *r, const uint8_t a[KYBER_POLYVECCOMPRESSEDBYTES
             a += 5;
 
             for (k = 0; k < 4; k++) {
-                r->vec[i].coeffs[4 * j + k] = ((uint32_t)(t[k] & 0x3FF) * KYBER_Q + 512) >> 10;
+                r->vec[i].coeffs[4 * j + k] = ((uint32_t)(t[k] & 0x3FF) * MLKEM_Q + 512) >> 10;
             }
         }
     }
     #else
-#error "KYBER_POLYVECCOMPRESSEDBYTES needs to be in {320*KYBER_K, 352*KYBER_K}"
+#error "MLKEM_POLYVECCOMPRESSEDBYTES needs to be in {320*MLKEM_K, 352*MLKEM_K}"
     #endif
 }
 
@@ -135,13 +135,13 @@ void polyvec_decompress(polyvec *r, const uint8_t a[KYBER_POLYVECCOMPRESSEDBYTES
 * Description: Serialize vector of polynomials
 *
 * Arguments:   - uint8_t *r: pointer to output byte array
-*                            (needs space for KYBER_POLYVECBYTES)
+*                            (needs space for MLKEM_POLYVECBYTES)
 *              - const polyvec *a: pointer to input vector of polynomials
 **************************************************/
-void polyvec_tobytes(uint8_t r[KYBER_POLYVECBYTES], const polyvec *a) {
+void polyvec_tobytes(uint8_t r[MLKEM_POLYVECBYTES], const polyvec *a) {
     unsigned int i;
-    for (i = 0; i < KYBER_K; i++) {
-        poly_tobytes(r + i * KYBER_POLYBYTES, &a->vec[i]);
+    for (i = 0; i < MLKEM_K; i++) {
+        poly_tobytes(r + i * MLKEM_POLYBYTES, &a->vec[i]);
     }
 }
 
@@ -153,12 +153,12 @@ void polyvec_tobytes(uint8_t r[KYBER_POLYVECBYTES], const polyvec *a) {
 *
 * Arguments:   - uint8_t *r:       pointer to output byte array
 *              - const polyvec *a: pointer to input vector of polynomials
-*                                  (of length KYBER_POLYVECBYTES)
+*                                  (of length MLKEM_POLYVECBYTES)
 **************************************************/
-void polyvec_frombytes(polyvec *r, const uint8_t a[KYBER_POLYVECBYTES]) {
+void polyvec_frombytes(polyvec *r, const uint8_t a[MLKEM_POLYVECBYTES]) {
     unsigned int i;
-    for (i = 0; i < KYBER_K; i++) {
-        poly_frombytes(&r->vec[i], a + i * KYBER_POLYBYTES);
+    for (i = 0; i < MLKEM_K; i++) {
+        poly_frombytes(&r->vec[i], a + i * MLKEM_POLYBYTES);
     }
 }
 
@@ -171,7 +171,7 @@ void polyvec_frombytes(polyvec *r, const uint8_t a[KYBER_POLYVECBYTES]) {
 **************************************************/
 void polyvec_ntt(polyvec *r) {
     unsigned int i;
-    for (i = 0; i < KYBER_K; i++) {
+    for (i = 0; i < MLKEM_K; i++) {
         poly_ntt(&r->vec[i]);
     }
 }
@@ -186,7 +186,7 @@ void polyvec_ntt(polyvec *r) {
 **************************************************/
 void polyvec_invntt_tomont(polyvec *r) {
     unsigned int i;
-    for (i = 0; i < KYBER_K; i++) {
+    for (i = 0; i < MLKEM_K; i++) {
         poly_invntt_tomont(&r->vec[i]);
     }
 }
@@ -206,7 +206,7 @@ void polyvec_basemul_acc_montgomery(poly *r, const polyvec *a, const polyvec *b)
     poly t;
 
     poly_basemul_montgomery(r, &a->vec[0], &b->vec[0]);
-    for (i = 1; i < KYBER_K; i++) {
+    for (i = 1; i < MLKEM_K; i++) {
         poly_basemul_montgomery(&t, &a->vec[i], &b->vec[i]);
         poly_add(r, r, &t);
     }
@@ -225,7 +225,7 @@ void polyvec_basemul_acc_montgomery(poly *r, const polyvec *a, const polyvec *b)
 **************************************************/
 void polyvec_reduce(polyvec *r) {
     unsigned int i;
-    for (i = 0; i < KYBER_K; i++) {
+    for (i = 0; i < MLKEM_K; i++) {
         poly_reduce(&r->vec[i]);
     }
 }
@@ -241,7 +241,7 @@ void polyvec_reduce(polyvec *r) {
 **************************************************/
 void polyvec_add(polyvec *r, const polyvec *a, const polyvec *b) {
     unsigned int i;
-    for (i = 0; i < KYBER_K; i++) {
+    for (i = 0; i < MLKEM_K; i++) {
         poly_add(&r->vec[i], &a->vec[i], &b->vec[i]);
     }
 }

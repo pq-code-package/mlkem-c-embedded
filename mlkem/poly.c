@@ -13,23 +13,23 @@
 * Description: Compression and subsequent serialization of a polynomial
 *
 * Arguments:   - uint8_t *r: pointer to output byte array
-*                            (of length KYBER_POLYCOMPRESSEDBYTES)
+*                            (of length MLKEM_POLYCOMPRESSEDBYTES)
 *              - const poly *a: pointer to input polynomial
 **************************************************/
-void poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], const poly *a) {
+void poly_compress(uint8_t r[MLKEM_POLYCOMPRESSEDBYTES], const poly *a) {
     unsigned int i, j;
     int32_t u;
     uint32_t d0;
     uint8_t t[8];
 
-    #if (KYBER_POLYCOMPRESSEDBYTES == 128)
+    #if (MLKEM_POLYCOMPRESSEDBYTES == 128)
 
-    for (i = 0; i < KYBER_N / 8; i++) {
+    for (i = 0; i < MLKEM_N / 8; i++) {
         for (j = 0; j < 8; j++) {
             // map to positive standard representatives
             u  = a->coeffs[8 * i + j];
-            u += (u >> 15) & KYBER_Q;
-            /*    t[j] = ((((uint16_t)u << 4) + KYBER_Q/2)/KYBER_Q) & 15; */
+            u += (u >> 15) & MLKEM_Q;
+            /*    t[j] = ((((uint16_t)u << 4) + MLKEM_Q/2)/MLKEM_Q) & 15; */
             d0 = u << 4;
             d0 += 1665;
             d0 *= 80635;
@@ -43,13 +43,13 @@ void poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], const poly *a) {
         r[3] = t[6] | (t[7] << 4);
         r += 4;
     }
-    #elif (KYBER_POLYCOMPRESSEDBYTES == 160)
-    for (i = 0; i < KYBER_N / 8; i++) {
+    #elif (MLKEM_POLYCOMPRESSEDBYTES == 160)
+    for (i = 0; i < MLKEM_N / 8; i++) {
         for (j = 0; j < 8; j++) {
             // map to positive standard representatives
             u  = a->coeffs[8 * i + j];
-            u += (u >> 15) & KYBER_Q;
-            /*    t[j] = ((((uint32_t)u << 5) + KYBER_Q/2)/KYBER_Q) & 31; */
+            u += (u >> 15) & MLKEM_Q;
+            /*    t[j] = ((((uint32_t)u << 5) + MLKEM_Q/2)/MLKEM_Q) & 31; */
             d0 = u << 5;
             d0 += 1664;
             d0 *= 40318;
@@ -65,7 +65,7 @@ void poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], const poly *a) {
         r += 5;
     }
     #else
-#error "KYBER_POLYCOMPRESSEDBYTES needs to be in {128, 160}"
+#error "MLKEM_POLYCOMPRESSEDBYTES needs to be in {128, 160}"
     #endif
 }
 
@@ -77,21 +77,21 @@ void poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], const poly *a) {
 *
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const uint8_t *a: pointer to input byte array
-*                                  (of length KYBER_POLYCOMPRESSEDBYTES bytes)
+*                                  (of length MLKEM_POLYCOMPRESSEDBYTES bytes)
 **************************************************/
-void poly_decompress(poly *r, const uint8_t a[KYBER_POLYCOMPRESSEDBYTES]) {
+void poly_decompress(poly *r, const uint8_t a[MLKEM_POLYCOMPRESSEDBYTES]) {
     unsigned int i;
 
-    #if (KYBER_POLYCOMPRESSEDBYTES == 128)
-    for (i = 0; i < KYBER_N / 2; i++) {
-        r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * KYBER_Q) + 8) >> 4;
-        r->coeffs[2 * i + 1] = (((uint16_t)(a[0] >> 4) * KYBER_Q) + 8) >> 4;
+    #if (MLKEM_POLYCOMPRESSEDBYTES == 128)
+    for (i = 0; i < MLKEM_N / 2; i++) {
+        r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * MLKEM_Q) + 8) >> 4;
+        r->coeffs[2 * i + 1] = (((uint16_t)(a[0] >> 4) * MLKEM_Q) + 8) >> 4;
         a += 1;
     }
-    #elif (KYBER_POLYCOMPRESSEDBYTES == 160)
+    #elif (MLKEM_POLYCOMPRESSEDBYTES == 160)
     unsigned int j;
     uint8_t t[8];
-    for (i = 0; i < KYBER_N / 8; i++) {
+    for (i = 0; i < MLKEM_N / 8; i++) {
         t[0] = (a[0] >> 0);
         t[1] = (a[0] >> 5) | (a[1] << 3);
         t[2] = (a[1] >> 2);
@@ -103,11 +103,11 @@ void poly_decompress(poly *r, const uint8_t a[KYBER_POLYCOMPRESSEDBYTES]) {
         a += 5;
 
         for (j = 0; j < 8; j++) {
-            r->coeffs[8 * i + j] = ((uint32_t)(t[j] & 31) * KYBER_Q + 16) >> 5;
+            r->coeffs[8 * i + j] = ((uint32_t)(t[j] & 31) * MLKEM_Q + 16) >> 5;
         }
     }
     #else
-#error "KYBER_POLYCOMPRESSEDBYTES needs to be in {128, 160}"
+#error "MLKEM_POLYCOMPRESSEDBYTES needs to be in {128, 160}"
     #endif
 }
 
@@ -117,19 +117,19 @@ void poly_decompress(poly *r, const uint8_t a[KYBER_POLYCOMPRESSEDBYTES]) {
 * Description: Serialization of a polynomial
 *
 * Arguments:   - uint8_t *r: pointer to output byte array
-*                            (needs space for KYBER_POLYBYTES bytes)
+*                            (needs space for MLKEM_POLYBYTES bytes)
 *              - const poly *a: pointer to input polynomial
 **************************************************/
-void poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a) {
+void poly_tobytes(uint8_t r[MLKEM_POLYBYTES], const poly *a) {
     unsigned int i;
     uint16_t t0, t1;
 
-    for (i = 0; i < KYBER_N / 2; i++) {
+    for (i = 0; i < MLKEM_N / 2; i++) {
         // map to positive standard representatives
         t0  = a->coeffs[2 * i];
-        t0 += ((int16_t)t0 >> 15) & KYBER_Q;
+        t0 += ((int16_t)t0 >> 15) & MLKEM_Q;
         t1 = a->coeffs[2 * i + 1];
-        t1 += ((int16_t)t1 >> 15) & KYBER_Q;
+        t1 += ((int16_t)t1 >> 15) & MLKEM_Q;
         r[3 * i + 0] = (t0 >> 0);
         r[3 * i + 1] = (t0 >> 8) | (t1 << 4);
         r[3 * i + 2] = (t1 >> 4);
@@ -144,11 +144,11 @@ void poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a) {
 *
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const uint8_t *a: pointer to input byte array
-*                                  (of KYBER_POLYBYTES bytes)
+*                                  (of MLKEM_POLYBYTES bytes)
 **************************************************/
-void poly_frombytes(poly *r, const uint8_t a[KYBER_POLYBYTES]) {
+void poly_frombytes(poly *r, const uint8_t a[MLKEM_POLYBYTES]) {
     unsigned int i;
-    for (i = 0; i < KYBER_N / 2; i++) {
+    for (i = 0; i < MLKEM_N / 2; i++) {
         r->coeffs[2 * i]   = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
         r->coeffs[2 * i + 1] = ((a[3 * i + 1] >> 4) | ((uint16_t)a[3 * i + 2] << 4)) & 0xFFF;
     }
@@ -162,18 +162,18 @@ void poly_frombytes(poly *r, const uint8_t a[KYBER_POLYBYTES]) {
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const uint8_t *msg: pointer to input message
 **************************************************/
-void poly_frommsg(poly *r, const uint8_t msg[KYBER_INDCPA_MSGBYTES]) {
+void poly_frommsg(poly *r, const uint8_t msg[MLKEM_INDCPA_MSGBYTES]) {
     unsigned int i, j;
     int16_t mask;
 
-    #if (KYBER_INDCPA_MSGBYTES != KYBER_N/8)
-#error "KYBER_INDCPA_MSGBYTES must be equal to KYBER_N/8 bytes!"
+    #if (MLKEM_INDCPA_MSGBYTES != MLKEM_N/8)
+#error "MLKEM_INDCPA_MSGBYTES must be equal to MLKEM_N/8 bytes!"
     #endif
 
-    for (i = 0; i < KYBER_N / 8; i++) {
+    for (i = 0; i < MLKEM_N / 8; i++) {
         for (j = 0; j < 8; j++) {
             mask = -(int16_t)((msg[i] >> j) & 1);
-            r->coeffs[8 * i + j] = mask & ((KYBER_Q + 1) / 2);
+            r->coeffs[8 * i + j] = mask & ((MLKEM_Q + 1) / 2);
         }
     }
 }
@@ -186,16 +186,16 @@ void poly_frommsg(poly *r, const uint8_t msg[KYBER_INDCPA_MSGBYTES]) {
 * Arguments:   - uint8_t *msg: pointer to output message
 *              - const poly *a: pointer to input polynomial
 **************************************************/
-void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *a) {
+void poly_tomsg(uint8_t msg[MLKEM_INDCPA_MSGBYTES], const poly *a) {
     unsigned int i, j;
     uint32_t t;
 
-    for (i = 0; i < KYBER_N / 8; i++) {
+    for (i = 0; i < MLKEM_N / 8; i++) {
         msg[i] = 0;
         for (j = 0; j < 8; j++) {
             t  = a->coeffs[8 * i + j];
-            // t += ((int16_t)t >> 15) & KYBER_Q;
-            // t  = (((t << 1) + KYBER_Q/2)/KYBER_Q) & 1;
+            // t += ((int16_t)t >> 15) & MLKEM_Q;
+            // t  = (((t << 1) + MLKEM_Q/2)/MLKEM_Q) & 1;
             t <<= 1;
             t += 1665;
             t *= 80635;
@@ -211,15 +211,15 @@ void poly_tomsg(uint8_t msg[KYBER_INDCPA_MSGBYTES], const poly *a) {
 *
 * Description: Sample a polynomial deterministically from a seed and a nonce,
 *              with output polynomial close to centered binomial distribution
-*              with parameter KYBER_ETA1
+*              with parameter MLKEM_ETA1
 *
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const uint8_t *seed: pointer to input seed
-*                                     (of length KYBER_SYMBYTES bytes)
+*                                     (of length MLKEM_SYMBYTES bytes)
 *              - uint8_t nonce: one-byte input nonce
 **************************************************/
-void poly_getnoise_eta1(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t nonce) {
-    uint8_t buf[KYBER_ETA1 * KYBER_N / 4];
+void poly_getnoise_eta1(poly *r, const uint8_t seed[MLKEM_SYMBYTES], uint8_t nonce) {
+    uint8_t buf[MLKEM_ETA1 * MLKEM_N / 4];
     prf(buf, sizeof(buf), seed, nonce);
     poly_cbd_eta1(r, buf);
 }
@@ -229,15 +229,15 @@ void poly_getnoise_eta1(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 *
 * Description: Sample a polynomial deterministically from a seed and a nonce,
 *              with output polynomial close to centered binomial distribution
-*              with parameter KYBER_ETA2
+*              with parameter MLKEM_ETA2
 *
 * Arguments:   - poly *r: pointer to output polynomial
 *              - const uint8_t *seed: pointer to input seed
-*                                     (of length KYBER_SYMBYTES bytes)
+*                                     (of length MLKEM_SYMBYTES bytes)
 *              - uint8_t nonce: one-byte input nonce
 **************************************************/
-void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t nonce) {
-    uint8_t buf[KYBER_ETA2 * KYBER_N / 4];
+void poly_getnoise_eta2(poly *r, const uint8_t seed[MLKEM_SYMBYTES], uint8_t nonce) {
+    uint8_t buf[MLKEM_ETA2 * MLKEM_N / 4];
     prf(buf, sizeof(buf), seed, nonce);
     poly_cbd_eta2(r, buf);
 }
@@ -280,7 +280,7 @@ void poly_invntt_tomont(poly *r) {
 **************************************************/
 void poly_basemul_montgomery(poly *r, const poly *a, const poly *b) {
     unsigned int i;
-    for (i = 0; i < KYBER_N / 4; i++) {
+    for (i = 0; i < MLKEM_N / 4; i++) {
         basemul(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i], zetas[64 + i]);
         basemul(&r->coeffs[4 * i + 2], &a->coeffs[4 * i + 2], &b->coeffs[4 * i + 2], -zetas[64 + i]);
     }
@@ -296,8 +296,8 @@ void poly_basemul_montgomery(poly *r, const poly *a, const poly *b) {
 **************************************************/
 void poly_tomont(poly *r) {
     unsigned int i;
-    const int16_t f = (1ULL << 32) % KYBER_Q;
-    for (i = 0; i < KYBER_N; i++) {
+    const int16_t f = (1ULL << 32) % MLKEM_Q;
+    for (i = 0; i < MLKEM_N; i++) {
         r->coeffs[i] = montgomery_reduce((int32_t)r->coeffs[i] * f);
     }
 }
@@ -312,7 +312,7 @@ void poly_tomont(poly *r) {
 **************************************************/
 void poly_reduce(poly *r) {
     unsigned int i;
-    for (i = 0; i < KYBER_N; i++) {
+    for (i = 0; i < MLKEM_N; i++) {
         r->coeffs[i] = barrett_reduce(r->coeffs[i]);
     }
 }
@@ -328,7 +328,7 @@ void poly_reduce(poly *r) {
 **************************************************/
 void poly_add(poly *r, const poly *a, const poly *b) {
     unsigned int i;
-    for (i = 0; i < KYBER_N; i++) {
+    for (i = 0; i < MLKEM_N; i++) {
         r->coeffs[i] = a->coeffs[i] + b->coeffs[i];
     }
 }
@@ -344,7 +344,7 @@ void poly_add(poly *r, const poly *a, const poly *b) {
 **************************************************/
 void poly_sub(poly *r, const poly *a, const poly *b) {
     unsigned int i;
-    for (i = 0; i < KYBER_N; i++) {
+    for (i = 0; i < MLKEM_N; i++) {
         r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
     }
 }
