@@ -75,9 +75,13 @@ For example,
 - `make [PLATFORM=<PLATFORM_NAME>] bin/mlkem1024-speed.hex` assembles the `mlkem-1024` speed benchmark binary.
 - `make [PLATFORM=<PLATFORM_NAME>] test` assembles all binaries for functional tests.
 - `make [PLATFORM=<PLATFORM_NAME>] speed` assembles all binaries for speed benchmarking
+- `make [PLATFORM=<PLATFORM_NAME>] stack` assembles all binaries for stack benchmarking
+- `make [PLATFORM=<PLATFORM_NAME>] KATRNG=NIST nistkat` assembles all binaries for nistkat
 - `make [PLATFORM=<PLATFORM_NAME>] (all)` assembles all the above targets for all parameter sets.
 
-- `make emulate` emulate `mps2-an386` with `QEMU`
+- `make emulate` build binaries for emulating `mps2-an386` on `QEMU` of test, speed, stack
+- `make "emulate [test|speed|stack|nistkat]"` build binaries of test, speed, stack or nistkat for emulating `mps2-an386` on `QEMU` 
+- `make "emulate run" ELF_FILE=<ELF_FILE_NAME>` run emulatation for the file on `QEMU`
 - `make clean` cleans up intermediate artifacts
 - `make distclean` additionally cleanup the `libopencm3` library
 
