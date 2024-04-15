@@ -17,16 +17,10 @@ jobs:
         script: |
           astyle --version
           arm-none-eabi-gcc --version
-    - name: Astyle
+    - name: Lint
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          err=$(astyle $(git ls-files "*.c" "*.h") --options=.astylerc --dry-run --formatted | awk '{print $2}')
-          if [[ ${#err} != 0 ]]; then
-            echo "$err" | while IFS= read -r file; do
-              echo "::error file={"$file"},title={checking}::Formatted $file"
-            done
-            exit 1
-          fi
+          lint
     - name: Build targets
       shell: nix develop .#ci -c bash -e {0}
       run: |
