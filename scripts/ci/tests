@@ -79,7 +79,6 @@ func()
   local tests=${1:-10}
   local expect=$((tests * 3))
   (
-    # shellcheck disable=SC2317
     expect_proc()
     {
       echo $((tests * 3))
@@ -94,7 +93,6 @@ speed()
   local TEST_TYPE="speed"
   local tests=${1:-10}
   (
-    # shellcheck disable=SC2317
     expect_proc()
     {
       echo "$tests"
@@ -108,7 +106,6 @@ stack()
 {
   local TEST_TYPE="stack"
   (
-    # shellcheck disable=SC2317
     expect_proc()
     {
       echo "1"
@@ -122,11 +119,9 @@ nistkat()
 {
   local TEST_TYPE="nistkat"
   (
-    # shellcheck disable=SC2317
     expect_proc()
     {
       local out
-      # shellcheck disable=SC2016
       out=$(yq -r --arg scheme "$1" '
         .implementations.[]
         | select(.name == $scheme)
