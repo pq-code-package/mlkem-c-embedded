@@ -20,6 +20,8 @@
         let
           core = with pkgs; [
             # formatter & linters
+            nixpkgs-fmt
+            shfmt
             astyle # 3.4.10
 
             # build dependencies
@@ -33,17 +35,13 @@
               direnv
               nix-direnv
 
-              # formatter & linters
-              nixpkgs-fmt
-              shfmt
-
               # debug dependencies
               openocd # 0.12.0
               python311Packages.pyserial # 3.5
             ];
 
             shellHook = ''
-              export PATH=$PWD/dev-support/bin:$PWD/scripts/ci:$PATH
+              export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
             '';
           };
 
@@ -51,10 +49,9 @@
             packages = core;
 
             shellHook = ''
-              export PATH=$PWD/dev-support/bin:$PWD/scripts/ci:$PATH
+              export PATH=$PWD/scripts/ci:$PATH
             '';
           };
-
         };
       flake = {
         # The usual flake attributes can be defined here, including system-
