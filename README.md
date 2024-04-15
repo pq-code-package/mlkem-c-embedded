@@ -63,7 +63,7 @@ All the develop and build dependencies are specified in [flake.nix](flake.nix).
 
 - If your're not using nix, please ensure you have installed the same version as specified in [flake.nix](flake.nix).
 
-For further details, please refer to [DevSupport](dev-support/)
+For further details, please refer to [scripts/README.md](scripts/README.md)
 
 ## Running tests and benchmarks
 

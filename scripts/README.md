@@ -18,15 +18,18 @@ experimental-features = nix-command flakes
 
 Enabling `direnv` would greatly enhance the development experience. Once enabled, all dependencies will be installed, and the shell will be augmented according to the specifications in [flake.nix](../flake.nix) whenever you enter the project directory from your shell. The initial setup might take a bit longer when entering the project directory for the first time.
 
-`direnv` can be enabled or disabled using `direnv allow` and `direnv deny` respectively. If you're new to `direnv`, it is also recommended to [integrate it with your shell](https://direnv.net/docs/hook.html) first.
+If you're new to `direnv`,  you must hook it into your shell first (e.x. append `eval "$(direnv hook bash)"` in `~/.bashrc` for `bash`), for other shells please refer to [hook direnv into your shell](https://direnv.net/docs/hook.html).
+After integrating `direnv` with your shell, it can be enabled or disabled using `direnv allow` and `direnv deny` respectively.
 
 ### Formatter and Linter
-- `nixpkgs-fmt` and `deadnix` for `Nix`
-- `shfmt` and `shellcheck` for shell script
+- `nixpkgs-fmt` for `Nix`
+- `shfmt` and for shell script
 - `astyle` for .c, .h files
 
-### Tools
+### Scripts
 
 When used together with direnv, the tools should be automatically discoverable by the shell.
 
-- [style](bin/style): Formatting, linting and spell checking all files
+- [format](format): Format all files
+- [lint](ci/lint): Lint all files
+- [test](ci/tests): Used for running func/speed/stack/nistkat tests
