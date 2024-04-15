@@ -205,9 +205,9 @@ void polyvec_basemul_acc_montgomery(poly *r, const polyvec *a, const polyvec *b)
     unsigned int i;
     poly t;
 
-    poly_basemul_montgomery(r, &a->vec[0], &b->vec[0]);
+    poly_basemul(r, &a->vec[0], &b->vec[0]);
     for (i = 1; i < MLKEM_K; i++) {
-        poly_basemul_montgomery(&t, &a->vec[i], &b->vec[i]);
+        poly_basemul(&t, &a->vec[i], &b->vec[i]);
         poly_add(r, r, &t);
     }
 
