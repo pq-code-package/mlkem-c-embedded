@@ -16,6 +16,8 @@ experimental-features = nix-command flakes
 
 ### [direnv](https://direnv.net/)
 
+`direnv` is required to install before used, for installation guide please refer to https://direnv.net/docs/installation.html
+
 Enabling `direnv` would greatly enhance the development experience. Once enabled, all dependencies will be installed, and the shell will be augmented according to the specifications in [flake.nix](../flake.nix) whenever you enter the project directory from your shell. The initial setup might take a bit longer when entering the project directory for the first time.
 
 If you're new to `direnv`,  you must hook it into your shell first (e.x. append `eval "$(direnv hook bash)"` in `~/.bashrc` for `bash`), for other shells please refer to [hook direnv into your shell](https://direnv.net/docs/hook.html).
