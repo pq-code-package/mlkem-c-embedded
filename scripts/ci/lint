@@ -39,6 +39,19 @@ echo "::group::Linting c files with astyle"
 checkerr "$(astyle $(git ls-files ":/*.c" ":/*.h") --options="$ROOT/.astylerc" --dry-run --formatted | awk '{print $2}')"
 echo "::endgroup::"
 
+check-eol-dry-run()
+{
+  for file in $(git ls-files -- ":/" ":/!:libopencm3"); do
+    if [[ $(tail -c1 "$file" | wc -l) == 0 ]]; then
+      l=$(wc -l <"$file")
+      echo "$file $l"
+    fi
+  done
+}
+echo "::group::Checking eol"
+checkerr "$(check-eol-dry-run)"
+echo "::endgroup::"
+
 #
 if ! $SUCCESS; then
   exit 1
