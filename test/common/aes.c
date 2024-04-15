@@ -1,4 +1,5 @@
-/*
+/* SPDX-License-Identifier: CC0-1.0
+ *
  * AES implementation based on code from BearSSL (https://bearssl.org/)
  * by Thomas Pornin.
  *
