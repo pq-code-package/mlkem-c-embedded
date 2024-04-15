@@ -20,6 +20,8 @@
         let
           core = with pkgs; [
             # formatter & linters
+            nixpkgs-fmt
+            shfmt
             astyle # 3.4.10
 
             # build dependencies
@@ -32,10 +34,6 @@
             packages = core ++ [
               direnv
               nix-direnv
-
-              # formatter & linters
-              nixpkgs-fmt
-              shfmt
 
               # debug dependencies
               openocd # 0.12.0
