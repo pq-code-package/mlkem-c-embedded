@@ -5,6 +5,14 @@
 
 #include <string.h>
 
+#if !defined(MPS2_AN386)
+#define SERIAL_MARKER() {\
+        hal_send_str("$");\
+    }
+#else
+#define SERIAL_MARKER()
+#endif
+
 const uint8_t canary[8] = {
     0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF
 };
@@ -144,11 +152,13 @@ int main(void) {
     hal_setup(CLOCK_FAST);
 
     // marker for automated testing
-    hal_send_str("==========================");
+    SERIAL_MARKER();
+
     test_keys();
     test_invalid_sk_a();
     test_invalid_ciphertext();
-    hal_send_str("#");
+
+    SERIAL_MARKER();
 
     return 0;
 }

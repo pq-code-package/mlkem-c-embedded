@@ -13,6 +13,15 @@
 #include "hal.h"
 #include "randombytes.h"
 
+#if !defined(MPS2_AN386)
+#define SERIAL_MARKER() {\
+        hal_send_str("$");\
+    }
+#else
+#define SERIAL_MARKER()
+#endif
+
+// NOTE: used Kyber in the nistkat rsp file for now to avoid changing the checksum
 #if   (MLKEM_K == 2)
 #define OLD_CRYPTO_ALGNAME "Kyber512"
 #elif (MLKEM_K == 3)
@@ -62,6 +71,7 @@ int main(void) {
     int rc;
 
     hal_setup(CLOCK_FAST);
+    SERIAL_MARKER();
 
     for (uint8_t i = 0; i < 48; i++) {
         entropy_input[i] = i;
@@ -110,6 +120,7 @@ int main(void) {
 
         hal_send_str("");
     }
+    SERIAL_MARKER();
 
     return 0;
 
