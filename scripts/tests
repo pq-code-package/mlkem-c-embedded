@@ -1,0 +1,290 @@
+#!/usr/bin/env python
+# SPDX-License-Identifier: Apache-2.0
+import serial
+import hashlib
+import platform
+import glob
+import asyncio
+import subprocess
+import click
+import logging
+from functools import reduce
+
+# utilities for interacting with the board
+
+
+def serial_ports():
+    """Lists serial port names"""
+    if platform.system() == "Windows":
+        ports = ["COM%s" % (i + 1) for i in range(256)]
+    elif platform.system() == "Darwin":
+        ports = glob.glob("/dev/tty.usbserial*")
+    elif platform.system() == "Linux":
+        ports = glob.glob("/dev/ttyUSB*")
+    else:
+        raise PlatformError("Unsupported platform")
+
+    return ports
+
+
+def usbdev():
+    port = next(iter(serial_ports()), None)
+
+    if port is None:
+        raise DeviceError("No available usb device")
+
+    dev = serial.Serial(port, 38400)
+    return dev
+
+
+async def flash(cfg, bin):
+    subprocess.run(
+        ["openocd", "-f", cfg, "-c", f"program {bin} verify reset exit"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
+
+
+async def read(dev):
+    logging.debug("Waiting for start marker")
+    x = dev.read_until(b"$")
+    logging.debug("Reading input")
+    x = dev.read_until(b"$")
+    return x[1:-1]
+
+
+async def flush_and_read(dev, cfg, bin):
+    # assume the first result is the usb device to use
+    asyncio.create_task(flash(cfg, bin))
+    read_task = asyncio.create_task(read(dev))
+    result = await read_task
+    logging.debug(str(result, encoding="utf-8"))
+    return result
+
+
+# test utilities
+
+
+def config_logger(verbose):
+    if verbose:
+        logging.basicConfig(format="%(levelname)-5s > %(message)s", level=logging.DEBUG)
+    else:
+        logging.basicConfig(format="%(levelname)-5s > %(message)s", level=logging.INFO)
+
+
+def count(bstr, match):
+    return str(bstr, encoding="utf8").count(match)
+
+
+def base_test(
+    test_type, emulate, platform_cfg, ntests, expect_proc, actual_proc, verbose
+):
+    """
+    test_type: test, speed, stack, nistkat
+    expect_proc: scheme -> any
+    actual_proc: str -> any
+    """
+    config_logger(verbose)
+
+    if emulate:
+        subprocess.run(
+            ["make", f"NTESTS={ntests}", f"emulate {test_type}"],
+            stdout=subprocess.DEVNULL,
+        )
+    else:
+        subprocess.run(
+            ["make", f"{test_type}"]
+            + [f"NTESTS={ntests}"] * (test_type != "nistkat")
+            + ["KATRNG=NIST"] * (test_type == "nistkat"),
+            stdout=subprocess.DEVNULL,
+        )
+
+    def check(file, expect, actual):
+        if actual != expect:
+            logging.error(
+                f"Check {file} failed, expecting {expect}, but getting actual {actual}"
+            )
+            sys.exit(1)
+        else:
+            logging.info(f"Check {file} passed")
+
+    if not emulate:
+        dev = usbdev()
+
+    for scheme in ["mlkem512", "mlkem768", "mlkem1024"]:
+        file = f"elf/{scheme}-{test_type}.elf"
+        expect = expect_proc(scheme)
+        if emulate:
+            actual = actual_proc(
+                subprocess.run(
+                    ["make", "emulate run", f"ELF_FILE={file}"], capture_output=True
+                ).stdout
+            )
+        else:
+            actual = actual_proc(asyncio.run(flush_and_read(dev, platform_cfg, file)))
+
+        check(file, expect, actual)
+
+
+# cli utilities
+
+_shared_options = [
+    click.option(
+        "-cfg",
+        "--platform-cfg",
+        default="hal/stm32f4discovery.cfg",
+        type=click.Path(),
+        help="Configuration file of the specified platform",
+    ),
+    click.option(
+        "-v",
+        "--verbose",
+        is_flag=True,
+        show_default=True,
+        default=False,
+        type=bool,
+        help="Show verbose output or not",
+    ),
+    click.option(
+        "-e",
+        "--emulate",
+        is_flag=True,
+        show_default=True,
+        default=False,
+        type=bool,
+        help="Emulate on the QEMU or not",
+    ),
+]
+
+
+def add_options(options):
+    return lambda func: reduce(lambda f, o: o(f), reversed(options), func)
+
+
+# commands
+
+
+@click.command(
+    short_help="Run for the specified platform and hex file without parsing the output",
+    context_settings={"show_default": True},
+)
+@add_options(_shared_options)
+@click.option(
+    "-b",
+    "--bin",
+    type=click.Path(),
+    help="The binary hex file that you wanted to test.",
+)
+def run(platform_cfg, bin, verbose, emulate):
+    config_logger(True)
+    dev = usbdev()
+
+    try:
+        result = asyncio.run(flush_and_read(dev, platform_cfg, bin))
+        logging.info(result)
+    except asyncio.CancelledError:
+        pass
+
+
+@click.command(
+    short_help="Run functional tests", context_settings={"show_default": True}
+)
+@add_options(_shared_options)
+@click.option("-t", "--ntests", default=1, type=int, help="Number of tests")
+def func(platform_cfg, ntests, verbose, emulate):
+    try:
+        base_test(
+            "test",
+            emulate,
+            platform_cfg,
+            ntests,
+            lambda _: ntests * 3,
+            lambda output: count(output, "OK"),
+            verbose,
+        )
+    except asyncio.CancelledError:
+        pass
+
+
+@click.command(short_help="Run speed tests", context_settings={"show_default": True})
+@add_options(_shared_options)
+@click.option("-t", "--ntests", default=1, type=int, help="Number of tests")
+def speed(platform_cfg, ntests, verbose, emulate):
+    try:
+        base_test(
+            "speed",
+            emulate,
+            platform_cfg,
+            ntests,
+            lambda _: ntests,
+            lambda output: count(output, "OK"),
+            verbose,
+        )
+    except asyncio.CancelledError:
+        pass
+
+
+@click.command(short_help="Run stack tests", context_settings={"show_default": True})
+@add_options(_shared_options)
+def stack(platform_cfg, verbose, emulate):
+    try:
+        base_test(
+            "stack",
+            emulate,
+            platform_cfg,
+            0,
+            lambda _: 1,
+            lambda output: count(output, "OK"),
+            verbose,
+        )
+    except asyncio.CancelledError:
+        pass
+
+
+@click.command(short_help="Run nistkat tests", context_settings={"show_default": True})
+@add_options(_shared_options)
+def nistkat(platform_cfg, verbose, emulate):
+    def scheme_hash(scheme):
+        result = subprocess.run(
+            [
+                "yq",
+                "-r",
+                "--arg",
+                "scheme",
+                scheme,
+                '.implementations.[] | select(.name == $scheme) | ."nistkat-sha256"',
+                "./META.yml",
+            ],
+            capture_output=True,
+            encoding="utf-8",
+            universal_newlines=False,
+        )
+        return result.stdout.strip()
+
+    try:
+        base_test(
+            "nistkat",
+            emulate,
+            platform_cfg,
+            0,
+            scheme_hash,
+            lambda output: hashlib.sha256(output).hexdigest(),
+            verbose,
+        )
+    except asyncio.CancelledError:
+        pass
+
+
+@click.group()
+def cli():
+    pass
+
+
+cli.add_command(run)
+cli.add_command(func)
+cli.add_command(speed)
+cli.add_command(stack)
+cli.add_command(nistkat)
+
+if __name__ == "__main__":
+    cli()

@@ -28,6 +28,10 @@
             gcc-arm-embedded-13 # arm-gnu-toolchain-13.2.rel1
             qemu # 8.1.5
             yq
+
+            python311
+            python311Packages.pyserial # 3.5
+            python311Packages.click
           ];
         in
         {
@@ -38,7 +42,6 @@
 
               # debug dependencies
               openocd # 0.12.0
-              python311Packages.pyserial # 3.5
             ];
 
             shellHook = ''
