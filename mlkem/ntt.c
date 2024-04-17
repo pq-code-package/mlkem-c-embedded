@@ -3,6 +3,7 @@
 #include "params.h"
 #include "ntt.h"
 #include "reduce.h"
+#include <arm_acle.h>
 
 /* Code to generate zetas and zetas_inv used in the number-theoretic transform:
 
@@ -56,6 +57,28 @@ const int16_t zetas[128] = {
     -108,  -308,   996,   991,   958, -1460,  1522,  1628
 };
 
+static const int32_t zetas_plant[] = {
+    2230699446, 3328631909, 4243360600, 3408622288, 812805467, 2447447570, 1094061961,
+    1370157786, 381889553, 3157039644, 372858381, 427045412, 4196914574, 2265533966,
+    2475831253, 1727534158, 1904287092, 1544330386, 2972545705, 2937711185, 2651294021,
+    249002310, 3929849920, 72249375, 838608815, 2550660963, 3242190693, 815385801,
+    1028263423, 2889974991, 1719793153, 3696329620, 42575525, 1703020977, 2470670584,
+    3594406395, 1839778722, 2701610550, 2991898216, 1851390229, 1041165097, 583155668,
+    4205945745, 690239563, 3718262466, 1855260731, 3700200122, 1979116802, 3098982111,
+    734105255, 3087370604, 3714391964, 3415073125, 3376368103, 1910737929, 836028480,
+    2252632292, 2546790461, 1059227441, 3191874164, 4012420634, 1583035408, 1174052340,
+    21932846, 3562152210, 752167598, 3417653460, 2112004045, 932791035, 2951903026,
+    1419184148, 1817845876, 3434425636, 4233039261, 300609006, 975366560, 2781600929,
+    3889854731, 3935010590, 2197155094, 2130066389, 3598276897, 2308109491, 2382939200,
+    1228239371, 1884934581, 3466679822, 1211467195, 2977706375, 3144137970, 3080919767,
+    945692709, 3015121229, 345764865, 826997308, 2043625172, 2964804700, 2628071007,
+    4154339049, 483812778, 3288636719, 2696449880, 2122325384, 1371447954, 411563403,
+    3577634219, 976656727, 2708061387, 723783916, 3181552825, 3346694253, 3617629408,
+    1408862808, 519937465, 1323711759, 1474661346, 2773859924, 3580214553, 1143088323,
+    2221668274, 1563682897, 2417773720, 1327582262, 2722253228, 3786641338, 1141798155,
+    2779020594
+};
+
 /*************************************************
 * Name:        fqmul
 *
@@ -70,6 +93,27 @@ static int16_t fqmul(int16_t a, int16_t b) {
     return montgomery_reduce((int32_t)a * b);
 }
 
+#define __pkhtb(a, b) (((uint32_t)a) & 0xFFFF0000) ^ (((b) >> 16) & 0xFFFF)
+static int32_t plantard(int32_t a, int32_t twiddle) {
+    int32_t qa = 26632;
+    int32_t q = 3329;
+
+    int32_t t1 = __smlawb(twiddle, a, 0);
+    int32_t t2 = __smlawt(twiddle, a, 0);
+    t1 = __smlabb(t1, q, qa);
+    t2 = __smlabb(t2, q, qa);
+    return __pkhtb(t2, t1);
+}
+
+static void doublebutterfly(int16_t *r1_16, int16_t *r2_16, int32_t z) {
+    int32_t *r1 = (int32_t *) r1_16;
+    int32_t *r2 = (int32_t *) r2_16;
+
+    int32_t t = plantard(*r2, z);
+    *r2 = __usub16(*r1, t);
+    *r1 = __uadd16(*r1, t);
+}
+
 /*************************************************
 * Name:        ntt
 *
@@ -79,19 +123,56 @@ static int16_t fqmul(int16_t a, int16_t b) {
 * Arguments:   - int16_t r[256]: pointer to input/output vector of elements of Zq
 **************************************************/
 void ntt(int16_t r[256]) {
-    unsigned int len, start, j, k;
-    int16_t t, zeta;
+    unsigned int len, j, i;
+    // layer 1+2+3
+    for (j = 0; j < 16; j++) {
+        len = 128;
+        doublebutterfly(r + 2 * j + 0 * 32, r + 2 * j + len + 0 * 32, zetas_plant[0]);
+        doublebutterfly(r + 2 * j + 1 * 32, r + 2 * j + len + 1 * 32, zetas_plant[0]);
+        doublebutterfly(r + 2 * j + 2 * 32, r + 2 * j + len + 2 * 32, zetas_plant[0]);
+        doublebutterfly(r + 2 * j + 3 * 32, r + 2 * j + len + 3 * 32, zetas_plant[0]);
+        len = 64;
+        doublebutterfly(r + 2 * j + 0 * 32, r + 2 * j + len + 0 * 32, zetas_plant[1]);
+        doublebutterfly(r + 2 * j + 1 * 32, r + 2 * j + len + 1 * 32, zetas_plant[1]);
+        doublebutterfly(r + 2 * j + 4 * 32, r + 2 * j + len + 4 * 32, zetas_plant[2]);
+        doublebutterfly(r + 2 * j + 5 * 32, r + 2 * j + len + 5 * 32, zetas_plant[2]);
+        len = 32;
+        doublebutterfly(r + 2 * j + 0 * 32, r + 2 * j + len + 0 * 32, zetas_plant[3]);
+        doublebutterfly(r + 2 * j + 2 * 32, r + 2 * j + len + 2 * 32, zetas_plant[4]);
+        doublebutterfly(r + 2 * j + 4 * 32, r + 2 * j + len + 4 * 32, zetas_plant[5]);
+        doublebutterfly(r + 2 * j + 6 * 32, r + 2 * j + len + 6 * 32, zetas_plant[6]);
+    }
 
-    k = 1;
-    for (len = 128; len >= 2; len >>= 1) {
-        for (start = 0; start < 256; start = j + len) {
-            zeta = zetas[k++];
-            for (j = start; j < start + len; j++) {
-                t = fqmul(zeta, r[j + len]);
-                r[j + len] = r[j] - t;
-                r[j] = r[j] + t;
-            }
+    // layer 4+5+6
+    const int32_t *zeta_ptr = zetas_plant + 7;
+    for (j = 0; j < 8; j++) {
+        for (i = 0; i < 2; i++) {
+            len = 16;
+            doublebutterfly(r + 2 * i + 32 * j + 0 * 4, r + 2 * i + 32 * j + len + 0 * 4, zeta_ptr[0]);
+            doublebutterfly(r + 2 * i + 32 * j + 1 * 4, r + 2 * i + 32 * j + len + 1 * 4, zeta_ptr[0]);
+            doublebutterfly(r + 2 * i + 32 * j + 2 * 4, r + 2 * i + 32 * j + len + 2 * 4, zeta_ptr[0]);
+            doublebutterfly(r + 2 * i + 32 * j + 3 * 4, r + 2 * i + 32 * j + len + 3 * 4, zeta_ptr[0]);
+
+            len = 8;
+            doublebutterfly(r + 2 * i + 32 * j + 0 * 4, r + 2 * i + 32 * j + len + 0 * 4, zeta_ptr[1]);
+            doublebutterfly(r + 2 * i + 32 * j + 1 * 4, r + 2 * i + 32 * j + len + 1 * 4, zeta_ptr[1]);
+            doublebutterfly(r + 2 * i + 32 * j + 4 * 4, r + 2 * i + 32 * j + len + 4 * 4, zeta_ptr[2]);
+            doublebutterfly(r + 2 * i + 32 * j + 5 * 4, r + 2 * i + 32 * j + len + 5 * 4, zeta_ptr[2]);
+
+            len = 4;
+            doublebutterfly(r + 2 * i +  32 * j + 0 * 4, r + 2 * i +  32 * j + len + 0 * 4, zeta_ptr[3]);
+            doublebutterfly(r + 2 * i +  32 * j + 2 * 4, r + 2 * i +  32 * j + len + 2 * 4, zeta_ptr[4]);
+            doublebutterfly(r + 2 * i +  32 * j + 4 * 4, r + 2 * i +  32 * j + len + 4 * 4, zeta_ptr[5]);
+            doublebutterfly(r + 2 * i +  32 * j + 6 * 4, r + 2 * i +  32 * j + len + 6 * 4, zeta_ptr[6]);
         }
+        zeta_ptr += 7;
+    }
+    zeta_ptr = zetas_plant + 63;
+
+    // layer 7
+    len = 2;
+    for (j = 0; j < 64; j++) {
+        doublebutterfly(r + 4 * j, r + 4 * j + len, zeta_ptr[j]);
     }
 }
 

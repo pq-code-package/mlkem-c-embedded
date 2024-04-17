@@ -11,6 +11,7 @@ PLATFORM ?= stm32f4discovery
 include mk/$(PLATFORM).mk
 
 CFLAGS += \
+	-O3 \
 	-std=gnu99 \
 	--sysroot=$(SYSROOT) \
 	-Wall -Wextra -Wshadow \
