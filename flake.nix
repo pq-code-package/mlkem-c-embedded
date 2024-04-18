@@ -53,7 +53,7 @@
             packages = core;
 
             shellHook = ''
-              export PATH=$PWD/scripts/ci:$PATH
+              export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
             '';
           };
         };
