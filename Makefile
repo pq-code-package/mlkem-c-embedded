@@ -15,11 +15,16 @@ Q ?= @
 test: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-test)
 speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
 stack: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-stack)
+nistkat: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-nistkat)
 
 .PHONY: emulate clean libclean
 
 emulate%: PLATFORM = mps2-an386
 emulate%: NTESTS = 10
+
+emulate\ nistkat: KATRNG=NIST
+emulate\ nistkat:
+	$(Q)$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS) KATRNG=$(KATRNG) nistkat
 
 # emulate for test, speed, stack
 emulate%:
