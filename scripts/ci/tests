@@ -68,13 +68,17 @@ cal_count()
   awk 'BEGIN{c=0} /OK/ {c++} END {print c}'
 }
 
+cal_sha256()
+{
+  sha256sum | awk '{ print $1 }'
+}
+
 func()
 {
   local TEST_TYPE="test"
   local tests=${1:-10}
   local expect=$((tests * 3))
   (
-    # shellcheck disable=SC2317
     expect_proc()
     {
       echo $((tests * 3))
@@ -89,7 +93,6 @@ speed()
   local TEST_TYPE="speed"
   local tests=${1:-10}
   (
-    # shellcheck disable=SC2317
     expect_proc()
     {
       echo "$tests"
@@ -103,13 +106,30 @@ stack()
 {
   local TEST_TYPE="stack"
   (
-    # shellcheck disable=SC2317
     expect_proc()
     {
       echo "1"
     }
 
     base_test "$TEST_TYPE" "" expect_proc cal_count
+  )
+}
+
+nistkat()
+{
+  local TEST_TYPE="nistkat"
+  (
+    expect_proc()
+    {
+      local out
+      out=$(yq -r --arg scheme "$1" '
+        .implementations.[]
+        | select(.name == $scheme)
+        | ."nistkat-sha256"' "$ROOT/META.yml")
+      echo "$out"
+    }
+
+    base_test "$TEST_TYPE" "" expect_proc cal_sha256
   )
 }
 

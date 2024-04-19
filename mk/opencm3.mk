@@ -1,5 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
-LIBHAL_SRC := hal/hal-opencm3.c hal/randombytes.c
+LIBHAL_SRC := hal/hal-opencm3.c
+
+ifndef KATRNG
+  LIBHAL_SRC += hal/randombytes.c
+else
+  ifeq ($(KATRNG),NIST)
+    LIBHAL_SRC += \
+	  test/common/nistkatrng.c \
+	  test/common/aes.c
+  endif
+endif
 
 obj/libpqm4hal.a: $(call objs,$(LIBHAL_SRC))
 
@@ -51,7 +61,7 @@ LDLIBS += -l$(LIBNAME)
 LIBDEPS += $(OPENCM3_DIR)/lib/lib$(LIBNAME).a
 
 LDFLAGS += -L$(OPENCM3_DIR)/lib
-CPPFLAGS += -I$(OPENCM3_DIR)/include
+CPPFLAGS += -I$(OPENCM3_DIR)/include $(if $(KATRNG)==NIST,-Itest/common)
 
 $(OPENCM3_DIR)/lib/lib$(LIBNAME).a:
 	$(MAKE) -C $(OPENCM3_DIR) $(OPENCM3_TARGET)
