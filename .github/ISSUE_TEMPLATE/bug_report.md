@@ -1,3 +1,4 @@
+[//]: # (SPDX-License-Identifier: CC-BY-4.0)
 ---
 name: Bug report
 about: Create a report to help us improve
