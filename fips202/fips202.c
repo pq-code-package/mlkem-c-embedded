@@ -212,6 +212,10 @@ void shake256_inc_squeeze(uint8_t *output, size_t outlen, shake256incctx *state)
     keccak_inc_squeeze(output, outlen, state->ctx, SHAKE256_RATE);
 }
 
+void sha3_256_inc_finalize(shake256incctx *state) {
+    keccak_inc_finalize(state->ctx, SHA3_256_RATE, 0x06);
+}
+
 /*************************************************
  * Name:        shake128_absorb
  *

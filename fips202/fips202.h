@@ -55,6 +55,8 @@ void shake256_inc_finalize(shake256incctx *state);
  */
 void shake256_inc_squeeze(uint8_t *output, size_t outlen, shake256incctx *state);
 
+void sha3_256_inc_finalize(shake256incctx *state);
+
 /* One-stop SHAKE256 call */
 void shake256(uint8_t *output, size_t outlen,
               const uint8_t *input, size_t inlen);
