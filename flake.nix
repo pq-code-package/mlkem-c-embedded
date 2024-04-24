@@ -27,6 +27,7 @@
             # build dependencies
             gcc-arm-embedded-13 # arm-gnu-toolchain-13.2.rel1
             qemu # 8.1.5
+            yq
           ];
         in
         {

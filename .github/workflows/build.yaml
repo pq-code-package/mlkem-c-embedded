@@ -65,3 +65,13 @@ jobs:
         || steps.speed_test.conclusion == 'failure'
       run: |
           tests stack
+    - name: Nistkat test
+      shell: nix develop .#ci -c bash -e {0}
+      if: |
+        success()
+        || steps.func_test.conclusion == 'failure'
+        || steps.speed_test.conclusion == 'failure'
+        || steps.stack_test.conclusion == 'failure'
+      run: |
+        make clean
+        tests nistkat
