@@ -129,7 +129,7 @@ int main(void) {
 
         inc_hash_format(&hash_state, "\n");
     }
-    sha3_256_inc_finalize(&hash_state);
+    shake256_inc_finalize(&hash_state);
     shake256_inc_squeeze(result, 32, &hash_state);
     hal_send_bstr("", result, 32);
     SERIAL_MARKER();
