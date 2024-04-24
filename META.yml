@@ -11,6 +11,7 @@ implementations:
     length-secret-key: 1632
     length-shared-secret: 32
     nistkat-sha256: 4b88ac7643ff60209af1175e025f354272e88df827a0ce1c056e403629b88e04
+    nistkat-sha3-256: adb052ff6ad496a6fceef81a54c2589cf91abcc5dcf0965fbc02f77b34bbbff9
   - name: mlkem768
     claimed-nist-level: 3
     claimed-security: IND-CCA2
@@ -19,6 +20,7 @@ implementations:
     length-secret-key: 2400
     length-shared-secret: 32
     nistkat-sha256: 21b4a1e1ea34a13c26a9da5eeb9325afb5ca11596ca6f3704c3f2637e3ea7524
+    nistkat-sha3-256: 8506e5ccbb70a1b07dc9f9686efd76b8ceb55dd3ea204518c6c69bb619bd86a5
   - name: mlkem1024
     claimed-nist-level: 5
     claimed-security: IND-CCA2
@@ -27,3 +29,4 @@ implementations:
     length-secret-key: 3168
     length-shared-secret: 32
     nistkat-sha256: 6471398b0a728ee1ef39e93bb89b526fbf59587a3662edadbcfc6c88a512cd71
+    nistkat-sha3-256: c41d12c2003537b0f5d08d785e41b4e7c4f9e6334a73a243a57b67f4e5dd58b8
