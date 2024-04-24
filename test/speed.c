@@ -49,19 +49,23 @@ int main(void) {
         t1 = hal_get_time();
         printcycles("ntt cycles:", t1 - t0);
 
+        // INVNTT
+        t0 = hal_get_time();
+        invntt(a.coeffs);
+        t1 = hal_get_time();
+        printcycles("invntt cycles:", t1 - t0);
+
         // Basemul
         t0 = hal_get_time();
         poly_basemul(&r, &a, &b);
         t1 = hal_get_time();
         printcycles("poly_basemul cycles:", t1 - t0);
 
-
         // Basemul_acc
         t0 = hal_get_time();
         poly_basemul_acc(&r, &a, &b);
         t1 = hal_get_time();
         printcycles("poly_basemul_acc cycles:", t1 - t0);
-
 
         if (memcmp(key_a, key_b, CRYPTO_BYTES)) {
             hal_send_str("ERROR KEYS\n");
