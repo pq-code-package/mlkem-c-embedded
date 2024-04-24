@@ -12,6 +12,7 @@
 #include "kem.h"
 #include "hal.h"
 #include "randombytes.h"
+#include "nistkatrng.h"
 
 // NOTE: used Kyber in the nistkat rsp file for now to avoid changing the checksum
 #if   (MLKEM_K == 2)
@@ -21,8 +22,6 @@
 #elif (MLKEM_K == 4)
 #define OLD_CRYPTO_ALGNAME "Kyber1024"
 #endif
-
-void nist_kat_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
 
 static void hal_send_Bstr(const char *S, const uint8_t *A, size_t L) {
     size_t i;
@@ -69,7 +68,7 @@ int main(void) {
         entropy_input[i] = i;
     }
 
-    nist_kat_init(entropy_input, NULL, 256);
+    randombytes_init(entropy_input, NULL, 256);
 
     for (size_t i = 0; i < counts; i++) {
         randombytes(seeds[i], 48);
@@ -79,7 +78,7 @@ int main(void) {
 
     for (size_t i = 0; i < counts; i++) {
         hal_send_format("count = %d", i);
-        nist_kat_init(seeds[i], NULL, 256);
+        randombytes_init(seeds[i], NULL, 256);
         hal_send_Bstr("seed = ", seeds[i], 48);
 
         rc = crypto_kem_keypair(public_key, secret_key);
