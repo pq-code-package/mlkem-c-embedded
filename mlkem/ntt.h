@@ -20,4 +20,7 @@ void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta)
 #define basemul_acc MLKEM_NAMESPACE(basemul_acc)
 void basemul_acc(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta);
 
+#define basemul_montgomery MLKEM_NAMESPACE(basemul_montgomery)
+void basemul_montgomery(int16_t r[256], const int16_t a[256], const int16_t b[256], int add);
+
 #endif

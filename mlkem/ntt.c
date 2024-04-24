@@ -79,6 +79,8 @@ static const int32_t zetas_plant[] = {
     2779020594
 };
 
+static const int32_t zetas_plant_basemul[64] = {21932846, 3562152210, 752167598, 3417653460, 2112004045, 932791035, 2951903026, 1419184148, 1817845876, 3434425636, 4233039261, 300609006, 975366560, 2781600929, 3889854731, 3935010590, 2197155094, 2130066389, 3598276897, 2308109491, 2382939200, 1228239371, 1884934581, 3466679822, 1211467195, 2977706375, 3144137970, 3080919767, 945692709, 3015121229, 345764865, 826997308, 2043625172, 2964804700, 2628071007, 4154339049, 483812778, 3288636719, 2696449880, 2122325384, 1371447954, 411563403, 3577634219, 976656727, 2708061387, 723783916, 3181552825, 3346694253, 3617629408, 1408862808, 519937465, 1323711759, 1474661346, 2773859924, 3580214553, 1143088323, 2221668274, 1563682897, 2417773720, 1327582262, 2722253228, 3786641338, 1141798155, 2779020594};
+
 /*************************************************
 * Name:        fqmul
 *
@@ -257,4 +259,46 @@ void basemul_acc(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t z
     r[0]  += fqmul(a0, b0);
     r[1]  += fqmul(a0, b1);
     r[1]  += fqmul(a1, b0);
+}
+
+static void basemul_plant(int32_t r[1], const int32_t a[1], const int32_t b[1], int32_t zeta) {
+    int32_t t1, t2;
+    int32_t qa = 26632;
+    int32_t q = 3329;
+    int32_t qinv = 0x6ba8f301;
+    int32_t a0 = a[0];
+    int32_t b0 = b[0];
+
+    t1 = __smlawt(zeta, b0, 0);
+    t1 = __smlabb(t1, q, qa);
+    t1 = __smlatt(a0, t1, 0);
+    t1 = __smlabb(a0, b0, t1);
+    t1 = qinv * t1;
+    t1 = __smlatb(t1, q, qa);
+
+    t2 = __smuadx(a0, b0);
+    t2 = qinv * t2;
+    t2 = __smlatb(t2, q, qa);
+    r[0] = __pkhtb(t2, t1);
+}
+
+void basemul_montgomery(int16_t r[256], const int16_t a[256], const int16_t b[256], int add) {
+    unsigned int i;
+    if (!add) {
+        for (i = 0; i < MLKEM_N / 4; i++) {
+            basemul_plant((int32_t *) &r[4 * i],     (int32_t *) &a[4 * i],     (int32_t *) &b[4 * i], zetas_plant_basemul[i]);
+            basemul_plant((int32_t *) &r[4 * i + 2], (int32_t *) &a[4 * i + 2], (int32_t *) &b[4 * i + 2], -zetas_plant_basemul[i]);
+
+            // TODO: remove once iNTT can handle Plantard mul
+            r[4 * i + 0] = montgomery_reduce((int32_t)r[4 * i + 0] * 1976);
+            r[4 * i + 1] = montgomery_reduce((int32_t)r[4 * i + 1] * 1976);
+            r[4 * i + 2] = montgomery_reduce((int32_t)r[4 * i + 2] * 1976);
+            r[4 * i + 3] = montgomery_reduce((int32_t)r[4 * i + 3] * 1976);
+        }
+    } else {
+        for (i = 0; i < MLKEM_N / 4; i++) {
+            basemul_acc(&r[4 * i], &a[4 * i], &b[4 * i], zetas[64 + i]);
+            basemul_acc(&r[4 * i + 2], &a[4 * i + 2], &b[4 * i + 2], -zetas[64 + i]);
+        }
+    }
 }

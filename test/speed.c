@@ -2,6 +2,7 @@
 #include "hal.h"
 #include "kem.h"
 #include "ntt.h"
+#include "poly.h"
 #include "sendfn.h"
 
 #include <stdint.h>
@@ -14,7 +15,7 @@ int main(void) {
     unsigned char sk[CRYPTO_SECRETKEYBYTES];
     unsigned char pk[CRYPTO_PUBLICKEYBYTES];
     unsigned char ct[CRYPTO_CIPHERTEXTBYTES];
-    int16_t a[MLKEM_N];
+    poly r, a, b;
 
     unsigned long long t0, t1;
     int i;
@@ -44,9 +45,23 @@ int main(void) {
 
         // NTT
         t0 = hal_get_time();
-        ntt(a);
+        ntt(a.coeffs);
         t1 = hal_get_time();
         printcycles("ntt cycles:", t1 - t0);
+
+        // Basemul
+        t0 = hal_get_time();
+        poly_basemul(&r, &a, &b);
+        t1 = hal_get_time();
+        printcycles("poly_basemul cycles:", t1 - t0);
+
+
+        // Basemul_acc
+        t0 = hal_get_time();
+        poly_basemul_acc(&r, &a, &b);
+        t1 = hal_get_time();
+        printcycles("poly_basemul_acc cycles:", t1 - t0);
+
 
         if (memcmp(key_a, key_b, CRYPTO_BYTES)) {
             hal_send_str("ERROR KEYS\n");

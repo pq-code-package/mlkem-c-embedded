@@ -553,18 +553,7 @@ void poly_invntt_tomont(poly *r) {
 *              - const poly *b: pointer to second input polynomial
 **************************************************/
 void poly_basemul_montgomery(poly *r, const poly *a, const poly *b, int add) {
-    unsigned int i;
-    if (!add) {
-        for (i = 0; i < MLKEM_N / 4; i++) {
-            basemul(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i], zetas[64 + i]);
-            basemul(&r->coeffs[4 * i + 2], &a->coeffs[4 * i + 2], &b->coeffs[4 * i + 2], -zetas[64 + i]);
-        }
-    } else {
-        for (i = 0; i < MLKEM_N / 4; i++) {
-            basemul_acc(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i], zetas[64 + i]);
-            basemul_acc(&r->coeffs[4 * i + 2], &a->coeffs[4 * i + 2], &b->coeffs[4 * i + 2], -zetas[64 + i]);
-        }
-    }
+    basemul_montgomery(r->coeffs, a->coeffs, b->coeffs, add);
 }
 
 /*************************************************
