@@ -4,15 +4,11 @@
 #include "polyvec.h"
 #include "symmetric.h"
 #include "matacc.h"
+#include "basemul.h"
 
 static void doublebasemul(int16_t r[4], const int16_t b[4], const int16_t a[4], int k, int add) {
-    if (!add) {
-        basemul(r, a, b, zetas[64 + k]);
-        basemul(&r[2], &a[2], &b[2], -zetas[64 + k]);
-    } else {
-        basemul_acc(r, a, b, zetas[64 + k]);
-        basemul_acc(&r[2], &a[2], &b[2], -zetas[64 + k]);
-    }
+    basemul((int32_t *) r, (int32_t *) a, (int32_t *) b, twiddles_plantard_basemul[k], add);
+    basemul((int32_t *) &r[2], (int32_t *)  &a[2], (int32_t *)  &b[2], -twiddles_plantard_basemul[k], add);
 }
 
 /*************************************************

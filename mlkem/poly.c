@@ -391,7 +391,7 @@ void poly_frombytes(poly *r, const uint8_t a[MLKEM_POLYBYTES]) {
 }
 
 /*************************************************
-* Name:        poly_frombytes_basemul_montgomery
+* Name:        poly_frombytes_basemul_plantard
 *
 * Description: Multiplication of a polynomial with a de-serialization of another polynomial;
 *              Conditionally accumulate.
@@ -403,24 +403,8 @@ void poly_frombytes(poly *r, const uint8_t a[MLKEM_POLYBYTES]) {
 *
 **************************************************/
 
-void poly_frombytes_basemul_montgomery(poly *r, const poly *b, const unsigned char *a, int add) {
-    unsigned int i;
-    int16_t ap[4];
-    for (i = 0; i < MLKEM_N / 4; i++) {
-        ap[0]   = ((a[6 * i + 0] >> 0) | ((uint16_t)a[6 * i + 1] << 8)) & 0xFFF;
-        ap[1] = ((a[6 * i + 1] >> 4) | ((uint16_t)a[6 * i + 2] << 4)) & 0xFFF;
-        ap[2]   = ((a[6 * i + 3] >> 0) | ((uint16_t)a[6 * i + 4] << 8)) & 0xFFF;
-        ap[3] = ((a[6 * i + 4] >> 4) | ((uint16_t)a[6 * i + 5] << 4)) & 0xFFF;
-
-        if (!add) {
-            basemul(&r->coeffs[4 * i], ap, &b->coeffs[4 * i], zetas[64 + i]);
-            basemul(&r->coeffs[4 * i + 2], ap + 2, &b->coeffs[4 * i + 2], -zetas[64 + i]);
-        } else {
-            basemul_acc(&r->coeffs[4 * i], ap, &b->coeffs[4 * i], zetas[64 + i]);
-            basemul_acc(&r->coeffs[4 * i + 2], ap + 2, &b->coeffs[4 * i + 2], -zetas[64 + i]);
-        }
-
-    }
+void poly_frombytes_basemul_plantard(poly *r, const poly *b, const unsigned char *a, int add) {
+    frombytes_basemul_plantard(r->coeffs, b->coeffs, a, add);
 }
 
 /*************************************************
@@ -531,7 +515,7 @@ void poly_ntt(poly *r) {
 }
 
 /*************************************************
-* Name:        poly_invntt_tomont
+* Name:        poly_invntt
 *
 * Description: Computes inverse of negacyclic number-theoretic transform (NTT)
 *              of a polynomial in place;
@@ -539,12 +523,12 @@ void poly_ntt(poly *r) {
 *
 * Arguments:   - uint16_t *a: pointer to in/output polynomial
 **************************************************/
-void poly_invntt_tomont(poly *r) {
+void poly_invntt(poly *r) {
     invntt(r->coeffs);
 }
 
 /*************************************************
-* Name:        poly_basemul_montgomery
+* Name:        poly_basemul_plantard
 *
 * Description: Multiplication of two polynomials in NTT domain
 *
@@ -552,24 +536,8 @@ void poly_invntt_tomont(poly *r) {
 *              - const poly *a: pointer to first input polynomial
 *              - const poly *b: pointer to second input polynomial
 **************************************************/
-void poly_basemul_montgomery(poly *r, const poly *a, const poly *b, int add) {
-    basemul_montgomery(r->coeffs, a->coeffs, b->coeffs, add);
-}
-
-/*************************************************
-* Name:        poly_tomont
-*
-* Description: Inplace conversion of all coefficients of a polynomial
-*              from normal domain to Montgomery domain
-*
-* Arguments:   - poly *r: pointer to input/output polynomial
-**************************************************/
-void poly_tomont(poly *r) {
-    unsigned int i;
-    const int16_t f = (1ULL << 32) % MLKEM_Q;
-    for (i = 0; i < MLKEM_N; i++) {
-        r->coeffs[i] = montgomery_reduce((int32_t)r->coeffs[i] * f);
-    }
+void poly_basemul_plantard(poly *r, const poly *a, const poly *b, int add) {
+    basemul_plantard(r->coeffs, a->coeffs, b->coeffs, add);
 }
 
 /*************************************************

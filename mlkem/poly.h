@@ -11,11 +11,11 @@
 #define poly_getnoise_eta2(p, seed, nonce) poly_noise_eta2(p, seed, nonce, 0)
 #define poly_addnoise_eta2(p, seed, nonce) poly_noise_eta2(p, seed, nonce, 1)
 
-#define poly_basemul(r, a, b) poly_basemul_montgomery(r, a, b, 0)
-#define poly_basemul_acc(r, a, b) poly_basemul_montgomery(r, a, b, 1)
+#define poly_basemul(r, a, b) poly_basemul_plantard(r, a, b, 0)
+#define poly_basemul_acc(r, a, b) poly_basemul_plantard(r, a, b, 1)
 
-#define poly_frombytes_basemul(r, a, b) poly_frombytes_basemul_montgomery(r, a, b, 0)
-#define poly_frombytes_basemul_acc(r, a, b) poly_frombytes_basemul_montgomery(r, a, b, 1)
+#define poly_frombytes_basemul(r, a, b) poly_frombytes_basemul_plantard(r, a, b, 0)
+#define poly_frombytes_basemul_acc(r, a, b) poly_frombytes_basemul_plantard(r, a, b, 1)
 
 /*
  * Elements of R_q = Z_q[X]/(X^n + 1). Represents polynomial
@@ -34,8 +34,8 @@ void poly_decompress(poly *r, const uint8_t a[MLKEM_POLYCOMPRESSEDBYTES]);
 void poly_tobytes(uint8_t r[MLKEM_POLYBYTES], const poly *a);
 #define poly_frombytes MLKEM_NAMESPACE(poly_frombytes)
 void poly_frombytes(poly *r, const uint8_t a[MLKEM_POLYBYTES]);
-#define poly_frombytes_basemul_montgomery MLKEM_NAMESPACE(poly_frombytes_basemul_montgomery)
-void poly_frombytes_basemul_montgomery(poly *r, const poly *b, const unsigned char *a, int acc);
+#define poly_frombytes_basemul_plantard MLKEM_NAMESPACE(poly_frombytes_basemul_plantard)
+void poly_frombytes_basemul_plantard(poly *r, const poly *b, const unsigned char *a, int acc);
 
 #define poly_packcompress MLKEM_NAMESPACE(poly_packcompress)
 void poly_packcompress(unsigned char *r, poly *a, int i);
@@ -61,14 +61,11 @@ void poly_noise_eta2(poly *r, const unsigned char *seed, unsigned char nonce, in
 
 #define poly_ntt MLKEM_NAMESPACE(poly_ntt)
 void poly_ntt(poly *r);
-#define poly_invntt_tomont MLKEM_NAMESPACE(poly_invntt_tomont)
-void poly_invntt_tomont(poly *r);
+#define poly_invntt MLKEM_NAMESPACE(poly_invntt)
+void poly_invntt(poly *r);
 
-#define poly_basemul_montgomery MLKEM_NAMESPACE(poly_basemul_montgomery)
-void poly_basemul_montgomery(poly *r, const poly *a, const poly *b, int add);
-
-#define poly_tomont MLKEM_NAMESPACE(poly_tomont)
-void poly_tomont(poly *r);
+#define poly_basemul_plantard MLKEM_NAMESPACE(poly_basemul_plantard)
+void poly_basemul_plantard(poly *r, const poly *a, const poly *b, int add);
 
 #define poly_reduce MLKEM_NAMESPACE(poly_reduce)
 void poly_reduce(poly *r);

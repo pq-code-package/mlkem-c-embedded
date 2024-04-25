@@ -47,7 +47,7 @@ void indcpa_keypair_derand(uint8_t pk[MLKEM_INDCPA_PUBLICKEYBYTES],
     for (i = 0; i < MLKEM_K; i++) {
         matacc(&pkp, &skpv, i, publicseed, 0);
 
-        poly_invntt_tomont(&pkp);
+        poly_invntt(&pkp);
         poly_addnoise_eta1(&pkp, noiseseed, nonce++);
         poly_ntt(&pkp);
         poly_reduce(&pkp);
@@ -97,7 +97,7 @@ void indcpa_enc(uint8_t c[MLKEM_INDCPA_BYTES],
     // matrix-vector multiplication
     for (i = 0; i < MLKEM_K; i++) {
         matacc(&b, &sp, i, seed, 1);
-        poly_invntt_tomont(&b);
+        poly_invntt(&b);
 
         poly_addnoise_eta2(&b, coins, nonce++);
         poly_reduce(&b);
@@ -111,7 +111,7 @@ void indcpa_enc(uint8_t c[MLKEM_INDCPA_BYTES],
         poly_frombytes(pkp, pk + i * MLKEM_POLYBYTES);
         poly_basemul_acc(v, pkp, &sp.vec[i]);
     }
-    poly_invntt_tomont(v);
+    poly_invntt(v);
     poly_addnoise_eta2(v, coins, nonce++);
 
     poly_frommsg(k, m);
@@ -149,7 +149,7 @@ void __attribute__ ((noinline)) indcpa_dec(uint8_t m[MLKEM_INDCPA_MSGBYTES],
         poly_ntt(&bp);
         poly_frombytes_basemul_acc(&mp,  &bp, sk + i * MLKEM_POLYBYTES);
     }
-    poly_invntt_tomont(&mp);
+    poly_invntt(&mp);
 
     poly_decompress(v, c + MLKEM_POLYVECCOMPRESSEDBYTES);
     poly_sub(&mp, v, &mp);
@@ -181,7 +181,7 @@ unsigned char indcpa_enc_cmp(const unsigned char *ct,
     // matrix-vector multiplication
     for (i = 0; i < MLKEM_K; i++) {
         matacc(&b, &sp, i, seed, 1);
-        poly_invntt_tomont(&b);
+        poly_invntt(&b);
 
         poly_addnoise_eta2(&b, coins, nonce++);
         poly_reduce(&b);
@@ -195,7 +195,7 @@ unsigned char indcpa_enc_cmp(const unsigned char *ct,
         poly_frombytes(pkp, pk + i * MLKEM_POLYBYTES);
         poly_basemul_acc(v, pkp, &sp.vec[i]);
     }
-    poly_invntt_tomont(v);
+    poly_invntt(v);
     poly_addnoise_eta2(v, coins, nonce++);
 
     poly_frommsg(k, m);

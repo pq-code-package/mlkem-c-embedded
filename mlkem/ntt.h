@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include "params.h"
 
-#define zetas MLKEM_NAMESPACE(zetas)
-extern const int16_t zetas[128];
+#define twiddles_plantard_basemul MLKEM_NAMESPACE(twiddles_plantard_basemul)
+extern const int32_t twiddles_plantard_basemul[64];
 
 #define ntt MLKEM_NAMESPACE(ntt)
 void ntt(int16_t poly[256]);
@@ -14,13 +14,10 @@ void ntt(int16_t poly[256]);
 #define invntt MLKEM_NAMESPACE(invntt)
 void invntt(int16_t poly[256]);
 
-#define basemul MLKEM_NAMESPACE(basemul)
-void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta);
+#define basemul_plantard MLKEM_NAMESPACE(basemul_plantard)
+void basemul_plantard(int16_t r[256], const int16_t a[256], const int16_t b[256], int add);
 
-#define basemul_acc MLKEM_NAMESPACE(basemul_acc)
-void basemul_acc(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta);
-
-#define basemul_montgomery MLKEM_NAMESPACE(basemul_montgomery)
-void basemul_montgomery(int16_t r[256], const int16_t a[256], const int16_t b[256], int add);
+#define frombytes_basemul_plantard MLKEM_NAMESPACE(frombytes_basemul_plantard)
+void frombytes_basemul_plantard(int16_t r[256], const int16_t b[256], const unsigned char *a, int add);
 
 #endif
