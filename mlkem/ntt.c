@@ -192,35 +192,21 @@ void ntt(int16_t r[256]) {
 * Arguments:   - int16_t r[256]: pointer to input/output vector of elements of Zq
 **************************************************/
 void invntt(int16_t r[256]) {
-    // TODO: try different layer merge
-    for (int i = 0; i < 8; i++) {
-        int32_t *p0 = (int32_t *)(r + i * 32 + 2 * 0);
-        int32_t *p1 = (int32_t *)(r + i * 32 + 2 * 1);
-        int32_t *p2 = (int32_t *)(r + i * 32 + 2 * 2);
-        int32_t *p3 = (int32_t *)(r + i * 32 + 2 * 3);
-        int32_t *p4 = (int32_t *)(r + i * 32 + 2 * 4);
-        int32_t *p5 = (int32_t *)(r + i * 32 + 2 * 5);
-        int32_t *p6 = (int32_t *)(r + i * 32 + 2 * 6);
-        int32_t *p7 = (int32_t *)(r + i * 32 + 2 * 7);
-
-        int32_t *p8  = (int32_t *)(r + i * 32 + 2 * 8);
-        int32_t *p9  = (int32_t *)(r + i * 32 + 2 * 9);
-        int32_t *p10 = (int32_t *)(r + i * 32 + 2 * 10);
-        int32_t *p11 = (int32_t *)(r + i * 32 + 2 * 11);
-        int32_t *p12 = (int32_t *)(r + i * 32 + 2 * 12);
-        int32_t *p13 = (int32_t *)(r + i * 32 + 2 * 13);
-        int32_t *p14 = (int32_t *)(r + i * 32 + 2 * 14);
-        int32_t *p15 = (int32_t *)(r + i * 32 + 2 * 15);
+    for (int i = 0; i < 16; i++) {
+        int32_t *p0 = (int32_t *)(r + i * 16 + 2 * 0);
+        int32_t *p1 = (int32_t *)(r + i * 16 + 2 * 1);
+        int32_t *p2 = (int32_t *)(r + i * 16 + 2 * 2);
+        int32_t *p3 = (int32_t *)(r + i * 16 + 2 * 3);
+        int32_t *p4 = (int32_t *)(r + i * 16 + 2 * 4);
+        int32_t *p5 = (int32_t *)(r + i * 16 + 2 * 5);
+        int32_t *p6 = (int32_t *)(r + i * 16 + 2 * 6);
+        int32_t *p7 = (int32_t *)(r + i * 16 + 2 * 7);
 
         // Layer 7
         doublebutterfly_light(p0, p1);
         doublebutterfly_light(p2, p3);
         doublebutterfly_light(p4, p5);
         doublebutterfly_light(p6, p7);
-        doublebutterfly_light(p8, p9);
-        doublebutterfly_light(p10, p11);
-        doublebutterfly_light(p12, p13);
-        doublebutterfly_light(p14, p15);
 
         // Layer 6
         doublebutterfly_light(p0, p2);
@@ -228,31 +214,22 @@ void invntt(int16_t r[256]) {
         doublebutterfly_light(p4, p6);
         *p6 = plantard_reduce(*p6);
         doublebutterfly(p5, p7, twiddles_plantard_invntt[0]);
-        doublebutterfly_light(p8, p10);
-        doublebutterfly(p9, p11, twiddles_plantard_invntt[0]);
-        doublebutterfly_light(p12, p14);
-        *p14 = plantard_reduce(*p14);
-        doublebutterfly(p13, p15, twiddles_plantard_invntt[0]);
 
         // Layer 5
         doublebutterfly_light(p0, p4);
         doublebutterfly(p1, p5, twiddles_plantard_invntt[1]);
         doublebutterfly(p2, p6, twiddles_plantard_invntt[2]);
         doublebutterfly(p3, p7, twiddles_plantard_invntt[3]);
-        doublebutterfly_light(p8, p12);
-        doublebutterfly(p9, p13, twiddles_plantard_invntt[1]);
-        doublebutterfly(p10, p14, twiddles_plantard_invntt[2]);
-        doublebutterfly(p11, p15, twiddles_plantard_invntt[3]);
+    }
 
-        // Layer 4
-        doublebutterfly(p0, p8, twiddles_plantard_invntt[4]);
-        doublebutterfly(p1, p9, twiddles_plantard_invntt[5]);
-        doublebutterfly(p2, p10, twiddles_plantard_invntt[6]);
-        doublebutterfly(p3, p11, twiddles_plantard_invntt[7]);
-        doublebutterfly(p4, p12, twiddles_plantard_invntt[8]);
-        doublebutterfly(p5, p13, twiddles_plantard_invntt[9]);
-        doublebutterfly(p6, p14, twiddles_plantard_invntt[10]);
-        doublebutterfly(p7, p15, twiddles_plantard_invntt[11]);
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            int32_t *p0 = (int32_t *)(r + i * 32 + j * 2 + 16 * 0 );
+            int32_t *p1  = (int32_t *)(r + i * 32 + j * 2 + 16 * 1 );
+
+            // Layer 4
+            doublebutterfly(p0, p1, twiddles_plantard_invntt[4 + j]);
+        }
     }
 
     const int32_t *twiddle = twiddles_plantard_invntt + 12;
