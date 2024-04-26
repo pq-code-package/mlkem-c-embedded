@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0 or CC0-1.0
+// SPDX-License-Identifier: Apache-2.0
 #ifndef BASEMUL_H
 #define BASEMUL_H
 
