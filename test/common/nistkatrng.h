@@ -5,11 +5,6 @@
 
 #include "aes.h"
 
-typedef struct {
-    unsigned char key[AES256_KEYBYTES];
-    unsigned char ctr[AES_BLOCKBYTES];
-} AES256_CTR_DRBG_struct;
-
-void randombytes_init(unsigned char *entropy_input, const unsigned char *personalization_string, int security_strength);
+void randombytes_init(unsigned char entropy_input[AES256_KEYBYTES + AES_BLOCKBYTES], const unsigned char personalization_string[AES256_KEYBYTES + AES_BLOCKBYTES], int security_strength);
 
 #endif
