@@ -83,7 +83,6 @@ For example,
 - `make "emulate [test|speed|stack|nistkat]"` build binaries of test, speed, stack or nistkat for emulating `mps2-an386` on `QEMU` 
 - `make "emulate run" ELF_FILE=<ELF_FILE_NAME>` run emulatation for the file on `QEMU`
 - `make clean` cleans up intermediate artifacts
-- `make distclean` additionally cleanup the `libopencm3` library
 
 ### Manual testing on board
 After generating the specified hex files, you can flash it to the development board using `openocd`. 
