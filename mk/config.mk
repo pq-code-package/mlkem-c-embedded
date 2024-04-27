@@ -1,6 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 SRCDIR := $(CURDIR)
 
+# GCC config
+CROSS_PREFIX ?= arm-none-eabi
+CC := $(CROSS_PREFIX)-gcc
+CPP := $(CROSS_PREFIX)-cpp
+AR := $(CROSS_PREFIX)-ar
+LD := $(CC)
+OBJCOPY := $(CROSS_PREFIX)-objcopy
+SIZE := $(CROSS_PREFIX)-size
+
 ###############
 # Some Macros #
 ###############
@@ -21,6 +30,18 @@ CFLAGS += \
 	$(CPPFLAGS)
 
 LDFLAGS += \
+	--specs=nosys.specs \
+	-Wl,--wrap=_sbrk \
+	-Wl,--wrap=_open \
+	-Wl,--wrap=_close \
+	-Wl,--wrap=_isatty \
+	-Wl,--wrap=_kill \
+	-Wl,--wrap=_lseek \
+	-Wl,--wrap=_read \
+	-Wl,--wrap=_write \
+	-Wl,--wrap=_fstat \
+	-Wl,--wrap=_getpid \
+	-ffreestanding \
 	-Lobj \
 	-Wl,--gc-sections
 

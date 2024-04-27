@@ -6,7 +6,6 @@ override LDSCRIPT := obj/generated.$(DEVICE).ld
 override DEVICES_DATA := hal/devices.data
 
 include $(OPENCM3_DIR)/mk/genlink-config.mk
-include $(OPENCM3_DIR)/mk/gcc-config.mk
 include $(OPENCM3_DIR)/mk/genlink-rules.mk
 include $(OPENCM3_DIR)/mk/gcc-rules.mk
 include mk/opencm3.mk
