@@ -97,7 +97,7 @@ def base_test(
         subprocess.run(
             ["make", f"{test_type}"]
             + [f"NTESTS={ntests}"] * (test_type != "nistkat")
-            + ["KATRNG=NIST"] * (test_type == "nistkat"),
+            + ["RNG=NISTKAT"] * (test_type == "nistkat"),
             stdout=subprocess.DEVNULL,
         )
 

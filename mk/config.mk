@@ -16,8 +16,27 @@ SIZE := $(CROSS_PREFIX)-size
 objs = $(addprefix obj/,$(addsuffix .o,$(1)))
 
 PLATFORM ?= stm32f4discovery
-KATRNG ?=
+RNG ?= HAL
 
+# RNG config
+ifeq ($(RNG),HAL)
+	LIBHAL_SRC += hal/randombytes.c
+else ifeq ($(RNG),NOTRAND)
+	LIBHAL_SRC += hal/notrandombytes.c
+else ifeq ($(RNG),NISTKAT)
+	LIBHAL_SRC += \
+		test/common/nistkatrng.c \
+		test/common/aes.c
+	CPPFLAGS += -Itest/common
+else
+	LIBHAL_SRC += hal/randombytes.c
+endif
+
+# HAL config
+LDLIBS += -lpqm4hal
+LIBDEPS += obj/libpqm4hal.a
+
+# Common config
 include mk/$(PLATFORM).mk
 
 CFLAGS += \
