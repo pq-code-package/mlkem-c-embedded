@@ -16,14 +16,6 @@
 
 #define send_stack_usage(S, U) send_unsigned((S), (U))
 
-#if !defined(MPS2_AN386)
-#define SERIAL_MARKER() {\
-        hal_send_str("$");\
-    }
-#else
-#define SERIAL_MARKER()
-#endif
-
 unsigned int canary_size;
 volatile unsigned char *p;
 unsigned int c;

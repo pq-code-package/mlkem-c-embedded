@@ -5,6 +5,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#if !defined(MPS2_AN386)
+#define SERIAL_MARKER() {\
+        hal_send_str("$");\
+    }
+#else
+#define SERIAL_MARKER()
+#endif
+
 enum clock_mode {
     CLOCK_FAST,
     CLOCK_BENCHMARK

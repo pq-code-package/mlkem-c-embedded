@@ -6,14 +6,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#if !defined(MPS2_AN386)
-#define SERIAL_MARKER() {\
-        hal_send_str("$");\
-    }
-#else
-#define SERIAL_MARKER()
-#endif
-
 #define printcycles(S, U) send_unsignedll((S), (U))
 
 int main(void) {

@@ -13,14 +13,6 @@
 #include "hal.h"
 #include "randombytes.h"
 
-#if !defined(MPS2_AN386)
-#define SERIAL_MARKER() {\
-        hal_send_str("$");\
-    }
-#else
-#define SERIAL_MARKER()
-#endif
-
 // NOTE: used Kyber in the nistkat rsp file for now to avoid changing the checksum
 #if   (MLKEM_K == 2)
 #define OLD_CRYPTO_ALGNAME "Kyber512"

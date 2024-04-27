@@ -5,14 +5,6 @@
 
 #include <string.h>
 
-#if !defined(MPS2_AN386)
-#define SERIAL_MARKER() {\
-        hal_send_str("$");\
-    }
-#else
-#define SERIAL_MARKER()
-#endif
-
 const uint8_t canary[8] = {
     0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF
 };
