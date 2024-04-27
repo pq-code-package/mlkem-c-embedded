@@ -8,6 +8,7 @@ import asyncio
 import subprocess
 import click
 import logging
+import sys
 from functools import reduce
 
 # utilities for interacting with the board
@@ -190,15 +191,15 @@ def run(platform_cfg, bin, verbose, emulate):
     short_help="Run functional tests", context_settings={"show_default": True}
 )
 @add_options(_shared_options)
-@click.option("-t", "--ntests", default=1, type=int, help="Number of tests")
-def func(platform_cfg, ntests, verbose, emulate):
+@click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
+def func(platform_cfg, iterations, verbose, emulate):
     try:
         base_test(
             "test",
             emulate,
             platform_cfg,
-            ntests,
-            lambda _: ntests * 3,
+            iterations,
+            lambda _: iterations * 3,
             lambda output: count(output, "OK"),
             verbose,
         )
@@ -208,15 +209,15 @@ def func(platform_cfg, ntests, verbose, emulate):
 
 @click.command(short_help="Run speed tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-@click.option("-t", "--ntests", default=1, type=int, help="Number of tests")
-def speed(platform_cfg, ntests, verbose, emulate):
+@click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
+def speed(platform_cfg, iterations, verbose, emulate):
     try:
         base_test(
             "speed",
             emulate,
             platform_cfg,
-            ntests,
-            lambda _: ntests,
+            iterations,
+            lambda _: iterations,
             lambda output: count(output, "OK"),
             verbose,
         )
