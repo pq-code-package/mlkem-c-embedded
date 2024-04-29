@@ -47,6 +47,7 @@ else
     LIBHAL_SRC += \
 	  test/common/nistkatrng.c \
 	  test/common/aes.c
+	CPPFLAGS += -Itest/common
   endif
 endif
 

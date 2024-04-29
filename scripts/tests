@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # SPDX-License-Identifier: Apache-2.0
+import sys
 import serial
 import hashlib
 import platform
@@ -253,7 +254,7 @@ def nistkat(platform_cfg, verbose, emulate):
                 "--arg",
                 "scheme",
                 scheme,
-                '.implementations.[] | select(.name == $scheme) | ."nistkat-sha256"',
+                '.implementations.[] | select(.name == $scheme) | ."nistkat-shake256-256"',
                 "./META.yml",
             ],
             capture_output=True,
@@ -269,7 +270,7 @@ def nistkat(platform_cfg, verbose, emulate):
             platform_cfg,
             0,
             scheme_hash,
-            lambda output: hashlib.sha256(output).hexdigest(),
+            lambda output: str(output, encoding="utf-8").strip().lower(),
             verbose,
         )
     except asyncio.CancelledError:

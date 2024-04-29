@@ -12,6 +12,8 @@
 #include "kem.h"
 #include "hal.h"
 #include "randombytes.h"
+#include "nistkatrng.h"
+#include "fips202.h"
 
 // NOTE: used Kyber in the nistkat rsp file for now to avoid changing the checksum
 #if   (MLKEM_K == 2)
@@ -22,33 +24,44 @@
 #define OLD_CRYPTO_ALGNAME "Kyber1024"
 #endif
 
-void nist_kat_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
-
-static void hal_send_Bstr(const char *S, const uint8_t *A, size_t L) {
-    size_t i;
-    char buf[16384];
+size_t format_bstr(char *buf, const char *S, const uint8_t *A, size_t L) {
+    size_t len = strlen(S);
     memcpy(buf, S, strlen(S));
-    for (i = 0; i < L; i++) {
-        snprintf(buf + strlen(S) + 2 * i, 3, "%02X", A[i]);
-    }
-    if (L == 0) {
-        snprintf(buf + strlen(S) + 2 * L, 3, "00");
+
+    for (size_t i = 0; i < L; i++) {
+        len += snprintf(buf + strlen(S) + 2 * i, 3, "%02X", A[i]);
     }
 
+    return len;
+}
+
+void inc_hash_bstr(shake256incctx *state, const char *S, const uint8_t *A, size_t L) {
+    size_t len;
+    char buf[strlen(S) + 2 * L + 1];
+
+    len = format_bstr(buf, S, A, L);
+    len += snprintf(buf + strlen(S) + 2 * L, 2, "\n");
+
+    shake256_inc_absorb(state, (unsigned char *)buf, len);
+}
+
+void hal_send_bstr(const char *S, const uint8_t *A, size_t L) {
+    char buf[strlen(S) + 2 * L + 1];
+    format_bstr(buf, S, A, L);
     hal_send_str(buf);
 }
 
-int hal_send_format(const char *S, ...) {
-    int result;
+size_t inc_hash_format(shake256incctx *state, const char *S, ...) {
+    size_t len;
     char buf[1024];
     va_list args;
     va_start(args, S);
-    result = vsnprintf(buf, 1024, S, args);
+    len = vsnprintf(buf, 1024, S, args);
     va_end(args);
 
-    hal_send_str(buf);
+    shake256_inc_absorb(state, (unsigned char *)buf, len);
 
-    return result;
+    return len;
 }
 
 int main(void) {
@@ -60,6 +73,8 @@ int main(void) {
     uint8_t ciphertext[CRYPTO_CIPHERTEXTBYTES];
     uint8_t shared_secret_e[CRYPTO_BYTES];
     uint8_t shared_secret_d[CRYPTO_BYTES];
+    uint8_t result[32];
+    shake256incctx hash_state;
     int rc;
 
     hal_setup(CLOCK_FAST);
@@ -69,38 +84,40 @@ int main(void) {
         entropy_input[i] = i;
     }
 
-    nist_kat_init(entropy_input, NULL, 256);
+    randombytes_init(entropy_input, NULL, 256);
 
     for (size_t i = 0; i < counts; i++) {
         randombytes(seeds[i], 48);
     }
 
-    hal_send_format("# %s\n", OLD_CRYPTO_ALGNAME);
+    shake256_inc_init(&hash_state);
+
+    inc_hash_format(&hash_state, "# %s\n\n", OLD_CRYPTO_ALGNAME);
 
     for (size_t i = 0; i < counts; i++) {
-        hal_send_format("count = %d", i);
-        nist_kat_init(seeds[i], NULL, 256);
-        hal_send_Bstr("seed = ", seeds[i], 48);
+        inc_hash_format(&hash_state, "count = %d\n", i);
+        randombytes_init(seeds[i], NULL, 256);
+        inc_hash_bstr(&hash_state, "seed = ", seeds[i], 48);
 
         rc = crypto_kem_keypair(public_key, secret_key);
         if (rc != 0) {
-            hal_send_format("[kat_kem] %s ERROR: crypto_kem_keypair failed!\n", CRYPTO_ALGNAME);
+            hal_send_str("ERROR: crypto_kem_keypair failed!");
             return -1;
         }
-        hal_send_Bstr("pk = ", public_key, CRYPTO_PUBLICKEYBYTES);
-        hal_send_Bstr("sk = ", secret_key, CRYPTO_SECRETKEYBYTES);
+        inc_hash_bstr(&hash_state, "pk = ", public_key, CRYPTO_PUBLICKEYBYTES);
+        inc_hash_bstr(&hash_state, "sk = ", secret_key, CRYPTO_SECRETKEYBYTES);
 
         rc = crypto_kem_enc(ciphertext, shared_secret_e, public_key);
         if (rc != 0) {
-            hal_send_format("[kat_kem] %s ERROR: crypto_kem_enc failed!\n", CRYPTO_ALGNAME);
+            hal_send_str("ERROR: crypto_kem_enc failed!");
             return -2;
         }
-        hal_send_Bstr("ct = ", ciphertext, CRYPTO_CIPHERTEXTBYTES);
-        hal_send_Bstr("ss = ", shared_secret_e, CRYPTO_BYTES);
+        inc_hash_bstr(&hash_state, "ct = ", ciphertext, CRYPTO_CIPHERTEXTBYTES);
+        inc_hash_bstr(&hash_state, "ss = ", shared_secret_e, CRYPTO_BYTES);
 
         rc = crypto_kem_dec(shared_secret_d, ciphertext, secret_key);
         if (rc != 0) {
-            hal_send_format("[kat_kem] %s ERROR: crypto_kem_dec failed!\n", CRYPTO_ALGNAME);
+            hal_send_str("ERROR: crypto_kem_dec failed!");
             return -3;
         }
 
@@ -110,10 +127,12 @@ int main(void) {
             return -4;
         }
 
-        hal_send_str("");
+        inc_hash_format(&hash_state, "\n");
     }
+    shake256_inc_finalize(&hash_state);
+    shake256_inc_squeeze(result, 32, &hash_state);
+    hal_send_bstr("", result, 32);
     SERIAL_MARKER();
 
     return 0;
-
 }
