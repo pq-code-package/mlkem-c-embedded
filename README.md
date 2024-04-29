@@ -85,6 +85,7 @@ For example,
 - `make clean` cleans up intermediate artifacts
 - `make distclean` additionally cleanup the `libopencm3` library
 
+### Manual testing on board
 After generating the specified hex files, you can flash it to the development board using `openocd`. 
 For example,
 ```
@@ -94,4 +95,38 @@ For example,
 To receive output from the develop board, you can, for example, use `pyserial-miniterm`: 
 ```
     pyserial-miniterm /dev/<tty_device> 38400
+```
+
+### Usage of the [tests script](scripts/tests)
+Make sure to run `make clean` between running tests on QEMU or on board or running func/stack/speed and nistkat tests. In case of any inconsistencies, refer to the help command for the most up-to-date usage information
+
+```
+▶ tests --help
+Usage: tests [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  func     Run functional tests
+  nistkat  Run nistkat tests
+  run      Run for the specified platform and hex file without parsing the
+           output
+  speed    Run speed tests
+  stack    Run stack tests
+```
+
+func/speed tests depends on the iteration parameter, which is passed to the tests in compile time, therefore it is preferred to build the binaries with the tests script
+
+```
+▶ tests func --help
+Usage: tests func [OPTIONS]
+
+Options:
+  -cfg, --platform-cfg PATH  Configuration file of the specified platform
+                             [default: hal/stm32f4discovery.cfg]
+  -v, --verbose              Show verbose output or not
+  -e, --emulate              Emulate on the QEMU or not
+  -i, --iterations INTEGER   Number of tests  [default: 1]
+  --help                     Show this message and exit.
 ```

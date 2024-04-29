@@ -18,7 +18,7 @@ int main(void) {
 
     hal_setup(CLOCK_BENCHMARK);
 
-    hal_send_str("==========================");
+    SERIAL_MARKER();
 
     for (i = 0; i < NTESTS; i++) {
         // Key-pair generation
@@ -47,7 +47,7 @@ int main(void) {
         hal_send_str("+");
     }
 
-    hal_send_str("#");
+    SERIAL_MARKER();
 
     return 0;
 }

@@ -47,7 +47,7 @@ jobs:
       id: func_test
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          tests func
+          tests func -e -v
     - name: Speed test
       id: speed_test
       shell: nix develop .#ci -c bash -e {0}
@@ -55,7 +55,7 @@ jobs:
         success()
         || steps.func_test.conclusion == 'failure'
       run: |
-          tests speed
+          tests speed -e -v
     - name: Stack test
       id: stack_test
       shell: nix develop .#ci -c bash -e {0}
@@ -64,7 +64,7 @@ jobs:
         || steps.func_test.conclusion == 'failure'
         || steps.speed_test.conclusion == 'failure'
       run: |
-          tests stack
+          tests stack -e -v
     - name: Nistkat test
       shell: nix develop .#ci -c bash -e {0}
       if: |
@@ -74,4 +74,4 @@ jobs:
         || steps.stack_test.conclusion == 'failure'
       run: |
         make clean
-        tests nistkat
+        tests nistkat -e -v

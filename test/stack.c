@@ -70,10 +70,10 @@ int main(void) {
     hal_setup(CLOCK_FAST);
 
     // marker for automated benchmarks
-    hal_send_str("==========================");
+    SERIAL_MARKER();
     test_keys();
     // marker for automated benchmarks
-    hal_send_str("#");
+    SERIAL_MARKER();
 
     return 0;
 }
