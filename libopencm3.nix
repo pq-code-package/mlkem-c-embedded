@@ -20,6 +20,10 @@ stdenv.mkDerivation rec {
     python311
     gcc-arm-embedded-13 # arm-gnu-toolchain-13.2.rel1
   ];
+  postPatch = ''
+    patchShebangs --build scripts/irq2nvic_h
+  '';
+  dontConfigure = true;
   buildPhase = ''
     make lib
   '';
@@ -29,11 +33,9 @@ stdenv.mkDerivation rec {
     cp -r ld/ $out/
     cp -r lib/ $out/
     cp -r mk/ $out/
-    cp --parent scripts/genlink.py $out/
+    cp -r scripts/ $out/
   '';
   dontStrip = true;
-  dontPatchELF = true;
-  dontPatchShebangs = true;
   noAuditTmpdir = true;
 
   meta = with lib; {
