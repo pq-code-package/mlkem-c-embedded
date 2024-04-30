@@ -5,6 +5,7 @@
 , fetchFromGitHub
 , python311
 , gcc-arm-embedded-13
+, targets ? [ ]
 }:
 
 stdenv.mkDerivation rec {
@@ -25,15 +26,19 @@ stdenv.mkDerivation rec {
   '';
   dontConfigure = true;
   buildPhase = ''
-    make lib
+    make ${if targets == [] then "lib" else "TARGETS=${lib.concatStrings targets}"}
   '';
   installPhase = ''
+    runHook preInstall
+
     mkdir -p $out
     cp -r include/ $out/
     cp -r ld/ $out/
     cp -r lib/ $out/
     cp -r mk/ $out/
     cp -r scripts/ $out/
+
+    runHook postInstall
   '';
   dontStrip = true;
   noAuditTmpdir = true;
