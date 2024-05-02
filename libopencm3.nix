@@ -1,14 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 { lib
-, stdenv
+, stdenvNoCC
 , fetchFromGitHub
 , python311
 , gcc-arm-embedded-13
 , targets ? [ ]
 }:
 
-stdenv.mkDerivation rec {
+stdenvNoCC.mkDerivation rec {
   pname = "libopencm3";
   version = "ec5aeba354ec273782e4441440fe9000b1c965e3";
   src = fetchFromGitHub {
