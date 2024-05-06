@@ -17,7 +17,7 @@ speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
 stack: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-stack)
 nistkat: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-nistkat)
 
-.PHONY: emulate clean libclean
+.PHONY: emulate clean
 
 emulate%: PLATFORM = mps2-an386
 emulate%: NTESTS = 10
@@ -39,5 +39,3 @@ clean:
 	$(Q)rm -rf elf/
 	$(Q)rm -rf bin/
 	$(Q)rm -rf obj/
-
-distclean: libclean clean
