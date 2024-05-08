@@ -17,6 +17,7 @@ jobs:
         script: |
           astyle --version
           arm-none-eabi-gcc --version
+          qemu-system-arm --version
     - name: Lint
       shell: nix develop .#ci -c bash -e {0}
       run: |
@@ -25,17 +26,7 @@ jobs:
       shell: nix develop .#ci -c bash -e {0}
       run: |
           make
-
-  emulate_test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Setup nix
-      uses: ./.github/actions/setup-nix
-      with:
-        script: |
-          arm-none-eabi-gcc --version
-          qemu-system-arm --version
+          make RNG=NISTKAT nistkat
     - name: Build for emulation on QEMU
       shell: nix develop .#ci -c bash -e {0}
       run: |
@@ -73,5 +64,4 @@ jobs:
         || steps.speed_test.conclusion == 'failure'
         || steps.stack_test.conclusion == 'failure'
       run: |
-        make clean
         tests nistkat -e -v
