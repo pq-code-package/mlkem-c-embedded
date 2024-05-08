@@ -19,8 +19,8 @@ LIBHAL_SRC += \
 	hal/mps2/startup_MPS2.S \
 	hal/hal-mps2.c
 
-obj/libpqm4hal.a: $(call objs,$(LIBHAL_SRC))
-obj/libpqm4hal.a: CPPFLAGS += -Ihal/mps2 $(if $(RNG)==NISTKAT,-Itest/common)
+obj/libhal.a: $(call objs,$(LIBHAL_SRC))
+obj/libhal.a: CPPFLAGS += -Ihal/mps2 $(if $(RNG)==NISTKAT,-Itest/common)
 
 $(LDSCRIPT): CPPFLAGS += $(if $(MPS2_DATA_IN_FLASH),-DDATA_IN_FLASH)
 obj/hal/mps2/startup_MPS2.S.o: CPPFLAGS += $(if $(MPS2_DATA_IN_FLASH),-DDATA_IN_FLASH)

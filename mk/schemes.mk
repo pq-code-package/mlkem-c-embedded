@@ -6,23 +6,23 @@ OBJS = $(call objs,$(addprefix $(1)/,$(notdir $(basename $(MLKEM_SOURCES)))) $(b
 
 define scheme-test
 $(1)-test: CPPFLAGS += -DMLKEM_K=$(2) -DNTESTS=$$(NTESTS)
-$(1)-test: bin/$(1)-test.hex
+$(1)-test: bin/$(1)-test.hex $(CONFIG)
 
 $(1)-speed: CPPFLAGS += -DMLKEM_K=$(2) -DNTESTS=$$(NTESTS)
-$(1)-speed: bin/$(1)-speed.hex
+$(1)-speed: bin/$(1)-speed.hex $(CONFIG)
 
 $(1)-stack: CPPFLAGS += -DMLKEM_K=$(2)
-$(1)-stack: bin/$(1)-stack.hex
+$(1)-stack: bin/$(1)-stack.hex $(CONFIG)
 
 $(1)-nistkat: CPPFLAGS += -DMLKEM_K=$(2)
-$(1)-nistkat: bin/$(1)-nistkat.hex
+$(1)-nistkat: bin/$(1)-nistkat.hex $(CONFIG)
 endef
 
 define scheme-elf
-elf/$(1)-test.elf: obj/test/$(1)-test.o $(call OBJS,$(1)) $(LINKDEPS)
-elf/$(1)-speed.elf: obj/test/$(1)-speed.o $(call OBJS,$(1)) $(LINKDEPS)
-elf/$(1)-stack.elf: obj/test/$(1)-stack.o $(call OBJS,$(1)) $(LINKDEPS)
-elf/$(1)-nistkat.elf: obj/test/$(1)-nistkat.o $(call OBJS,$(1)) $(LINKDEPS)
+elf/$(1)-test.elf: obj/test/$(1)-test.o $(call OBJS,$(1)) $(LINKDEPS) $(CONFIG)
+elf/$(1)-speed.elf: obj/test/$(1)-speed.o $(call OBJS,$(1)) $(LINKDEPS) $(CONFIG)
+elf/$(1)-stack.elf: obj/test/$(1)-stack.o $(call OBJS,$(1)) $(LINKDEPS) $(CONFIG)
+elf/$(1)-nistkat.elf: obj/test/$(1)-nistkat.o $(call OBJS,$(1)) $(LINKDEPS) $(CONFIG)
 endef
 
 define compile-obj
@@ -32,21 +32,21 @@ define compile-obj
 endef
 
 define scheme-obj
-obj/$(1)/%.o: mlkem/%.c
+obj/$(1)/%.o: mlkem/%.c $(CONFIG)
 	$$(compile-obj)
 endef
 
 define scheme-test-obj
-obj/test/$(1)-test.o: test/test.c
+obj/test/$(1)-test.o: test/test.c $(CONFIG)
 	$$(compile-obj)
 
-obj/test/$(1)-speed.o: test/speed.c
+obj/test/$(1)-speed.o: test/speed.c $(CONFIG)
 	$$(compile-obj)
 
-obj/test/$(1)-stack.o: test/stack.c
+obj/test/$(1)-stack.o: test/stack.c $(CONFIG)
 	$$(compile-obj)
 
-obj/test/$(1)-nistkat.o: test/nistkat.c
+obj/test/$(1)-nistkat.o: test/nistkat.c $(CONFIG)
 	$$(compile-obj)
 endef
 
