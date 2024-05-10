@@ -51,6 +51,7 @@
             shellHook = ''
               export OPENCM3_DIR=${libopencm3}
               export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
+              eval "$(_TESTS_COMPLETE=source tests)"
             '';
           };
 
