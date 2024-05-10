@@ -19,7 +19,7 @@
       perSystem = { pkgs, ... }:
         let
           libopencm3 = pkgs.callPackage ./libopencm3.nix {
-            targets = [ "stm32/f4" ];
+            targets = [ "stm32/f4" "stm32/f7" ];
           };
           core = builtins.attrValues {
             libopencm3 = libopencm3;
