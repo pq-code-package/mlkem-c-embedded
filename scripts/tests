@@ -79,7 +79,13 @@ def count(bstr, match):
 
 
 def base_test(
-    test_type, emulate, platform_cfg, ntests, expect_proc, actual_proc, verbose
+    test_type,
+    emulate,
+    platform,
+    ntests,
+    expect_proc,
+    actual_proc,
+    verbose,
 ):
     """
     test_type: test, speed, stack, nistkat
@@ -89,17 +95,19 @@ def base_test(
     config_logger(verbose)
 
     if emulate:
-        subprocess.run(
-            ["make", f"NTESTS={ntests}", f"emulate {test_type}"],
-            stdout=subprocess.DEVNULL,
-        )
+        platform = getattr(platform_map, platform).qemu_platform
     else:
-        subprocess.run(
-            ["make", f"{test_type}"]
-            + [f"NTESTS={ntests}"] * (test_type != "nistkat")
-            + ["RNG=NISTKAT"] * (test_type == "nistkat"),
-            stdout=subprocess.DEVNULL,
-        )
+        platform_cfg = getattr(platform_map, platform).openocd_cfg
+
+    p = subprocess.run(
+        ["make", f"NTESTS={ntests}", f"PLATFORM={platform}"]
+        + [f"emulate {test_type}"] * emulate
+        + ["RNG=NISTKAT"] * (test_type == "nistkat")
+        + ["RNG=NOTRND"] * (emulate and test_type != "nistkat")
+        + ["RNG=HAL"] * (not emulate and test_type != "nistkat"),
+        stdout=subprocess.DEVNULL if not verbose else None,
+    )
+    logging.info(format(subprocess.list2cmdline(p.args)))
 
     def check(file, expect, actual):
         if actual != expect:
@@ -119,7 +127,8 @@ def base_test(
         if emulate:
             actual = actual_proc(
                 subprocess.run(
-                    ["make", "emulate run", f"ELF_FILE={file}"], capture_output=True
+                    ["make", "emulate run", f"ELF_FILE={file}", f"PLATFORM={platform}"],
+                    capture_output=True,
                 ).stdout
             )
         else:
@@ -131,13 +140,6 @@ def base_test(
 # cli utilities
 
 _shared_options = [
-    click.option(
-        "-cfg",
-        "--platform-cfg",
-        default="hal/stm32f4discovery.cfg",
-        type=click.Path(),
-        help="Configuration file of the specified platform",
-    ),
     click.option(
         "-v",
         "--verbose",
@@ -158,18 +160,60 @@ _shared_options = [
     ),
 ]
 
+_shared_args = [
+    click.argument(
+        "platform",
+        nargs=1,
+        type=click.Choice(["stm32f4discovery"]),
+    )
+]
+
 
 def add_options(options):
     return lambda func: reduce(lambda f, o: o(f), reversed(options), func)
 
 
+def add_args(args):
+    return lambda func: reduce(lambda f, o: o(f), reversed(args), func)
+
+
 # commands
+from types import SimpleNamespace
+
+
+class RecursiveNamespace(SimpleNamespace):
+
+    @staticmethod
+    def map_entry(entry):
+        if isinstance(entry, dict):
+            return RecursiveNamespace(**entry)
+
+        return entry
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        for key, val in kwargs.items():
+            if type(val) == dict:
+                setattr(self, key, RecursiveNamespace(**val))
+            elif type(val) == list:
+                setattr(self, key, list(map(self.map_entry, val)))
+
+
+platform_map = RecursiveNamespace(
+    **{
+        "stm32f4discovery": {
+            "qemu_platform": "mps2-an386",
+            "openocd_cfg": "board/stm32f4discovery.cfg",
+        }
+    }
+)
 
 
 @click.command(
     short_help="Run for the specified platform and hex file without parsing the output",
     context_settings={"show_default": True},
 )
+@add_args(_shared_args)
 @add_options(_shared_options)
 @click.option(
     "-b",
@@ -177,12 +221,14 @@ def add_options(options):
     type=click.Path(),
     help="The binary hex file that you wanted to test.",
 )
-def run(platform_cfg, bin, verbose, emulate):
+def run(platform, bin, verbose, emulate):
     config_logger(True)
     dev = usbdev()
 
     try:
-        result = asyncio.run(flush_and_read(dev, platform_cfg, bin))
+        result = asyncio.run(
+            flush_and_read(dev, getattr(platform_map, platform).openocd_cfg, bin)
+        )
         logging.info(result)
     except asyncio.CancelledError:
         pass
@@ -191,14 +237,15 @@ def run(platform_cfg, bin, verbose, emulate):
 @click.command(
     short_help="Run functional tests", context_settings={"show_default": True}
 )
+@add_args(_shared_args)
 @add_options(_shared_options)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
-def func(platform_cfg, iterations, verbose, emulate):
+def func(platform, iterations, verbose, emulate):
     try:
         base_test(
             "test",
             emulate,
-            platform_cfg,
+            platform,
             iterations,
             lambda _: iterations * 3,
             lambda output: count(output, "OK"),
@@ -210,13 +257,14 @@ def func(platform_cfg, iterations, verbose, emulate):
 
 @click.command(short_help="Run speed tests", context_settings={"show_default": True})
 @add_options(_shared_options)
+@add_options(_shared_args)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
-def speed(platform_cfg, iterations, verbose, emulate):
+def speed(platform, iterations, verbose, emulate):
     try:
         base_test(
             "speed",
             emulate,
-            platform_cfg,
+            platform,
             iterations,
             lambda _: iterations,
             lambda output: count(output, "OK"),
@@ -228,12 +276,13 @@ def speed(platform_cfg, iterations, verbose, emulate):
 
 @click.command(short_help="Run stack tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-def stack(platform_cfg, verbose, emulate):
+@add_options(_shared_args)
+def stack(platform, verbose, emulate):
     try:
         base_test(
             "stack",
             emulate,
-            platform_cfg,
+            platform,
             0,
             lambda _: 1,
             lambda output: count(output, "OK"),
@@ -245,7 +294,8 @@ def stack(platform_cfg, verbose, emulate):
 
 @click.command(short_help="Run nistkat tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-def nistkat(platform_cfg, verbose, emulate):
+@add_options(_shared_args)
+def nistkat(platform, verbose, emulate):
     def scheme_hash(scheme):
         result = subprocess.run(
             [
@@ -267,7 +317,7 @@ def nistkat(platform_cfg, verbose, emulate):
         base_test(
             "nistkat",
             emulate,
-            platform_cfg,
+            platform,
             0,
             scheme_hash,
             lambda output: str(output, encoding="utf-8").strip().lower(),
