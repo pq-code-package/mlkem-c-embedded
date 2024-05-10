@@ -26,7 +26,7 @@ stdenvNoCC.mkDerivation rec {
   '';
   dontConfigure = true;
   buildPhase = ''
-    make ${if targets == [] then "lib" else "TARGETS=${lib.concatStrings targets}"}
+    make ${if targets == [] then "lib" else "TARGETS='${lib.concatMapStrings (t: t + " ") targets}'"}
   '';
   installPhase = ''
     runHook preInstall
