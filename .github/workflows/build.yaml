@@ -25,8 +25,19 @@ jobs:
     - name: Build targets
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          make
-          make RNG=NISTKAT nistkat
+          make_platform() {
+            echo "::group::make platform $1"
+            make PLATFORM="$1"
+            echo "::endgroup::"
+
+            echo "::group::make platform $1 nistkat"
+            make PLATFORM="$1" RNG=NISTKAT nistkat
+            echo "::endgroup::"
+          }
+
+          make_platform stm32f4discovery
+          make_platform stm32f767zi
+
     - name: Build for emulation on QEMU
       shell: nix develop .#ci -c bash -e {0}
       run: |
