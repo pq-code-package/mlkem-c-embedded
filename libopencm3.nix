@@ -43,7 +43,7 @@ stdenvNoCC.mkDerivation rec {
   dontStrip = true;
   noAuditTmpdir = true;
 
-  meta = with lib; {
+  meta = {
     description = "Open source ARM Cortex-M microcontroller library";
     homepage = "https://libopencm3.org/";
   };
