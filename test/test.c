@@ -144,11 +144,13 @@ int main(void) {
     hal_setup(CLOCK_FAST);
 
     // marker for automated testing
-    hal_send_str("==========================");
+    SERIAL_MARKER();
+
     test_keys();
     test_invalid_sk_a();
     test_invalid_ciphertext();
-    hal_send_str("#");
+
+    SERIAL_MARKER();
 
     return 0;
 }

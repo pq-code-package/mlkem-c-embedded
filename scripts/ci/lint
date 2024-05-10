@@ -41,7 +41,7 @@ echo "::endgroup::"
 
 check-eol-dry-run()
 {
-  for file in $(git ls-files -- ":/" ":/!:libopencm3"); do
+  for file in $(git ls-files -- ":/"); do
     if [[ $(tail -c1 "$file" | wc -l) == 0 ]]; then
       l=$(wc -l <"$file")
       echo "$file $l"
@@ -54,7 +54,7 @@ echo "::endgroup::"
 
 check-spdx()
 {
-  for file in $(git ls-files -- ":/" ":/!:libopencm3" ":/!:*LICENSE*" ":/!:.git*" ":/!:flake.lock"); do
+  for file in $(git ls-files -- ":/" ":/!:*LICENSE*" ":/!:.git*" ":/!:flake.lock"); do
     if [[ $(grep "SPDX-License-Identifier:" $file | wc -l) == 0 ]]; then
       echo "$file is missing SPDX License header"
       SUCCESS=false

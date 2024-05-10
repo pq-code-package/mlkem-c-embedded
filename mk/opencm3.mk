@@ -18,10 +18,6 @@ LIBDEPS += obj/libpqm4hal.a
 
 LDLIBS += -lc -lgcc
 
-OPENCM3_DIR = $(CURDIR)/libopencm3
-
-_git_submodule_update_opencm3 := $(shell git submodule update --init --recursive $(OPENCM3_DIR))
-
 ifeq ($(DEVICE),)
 $(warning no DEVICE specified for linker script generator)
 endif
@@ -58,15 +54,9 @@ endif
 LIBNAME = opencm3_$(genlink_family)
 
 LDLIBS += -l$(LIBNAME)
-LIBDEPS += $(OPENCM3_DIR)/lib/lib$(LIBNAME).a
 
 LDFLAGS += -L$(OPENCM3_DIR)/lib
 CPPFLAGS += -I$(OPENCM3_DIR)/include $(if $(KATRNG)==NIST,-Itest/common)
-
-$(OPENCM3_DIR)/lib/lib$(LIBNAME).a:
-	$(MAKE) -C $(OPENCM3_DIR) $(OPENCM3_TARGET)
-
-obj/hal/hal-opencm3.c.o: $(OPENCM3_DIR)/lib/lib$(LIBNAME).a
 
 LDSCRIPT = obj/generated.$(DEVICE).ld
 $(LDSCRIPT): $(OPENCM3_DIR)/ld/linker.ld.S $(OPENCM3_DIR)/ld/devices.data $(CONFIG)
@@ -101,10 +91,5 @@ LDFLAGS += \
 	-ffreestanding \
 	-T$(LDSCRIPT) \
 	$(ARCH_FLAGS)
-
-.PHONY: libclean
-
-libclean:
-	$(MAKE) -C $(OPENCM3_DIR) clean
 
 LINKDEPS += $(LDSCRIPT) $(LIBDEPS)
