@@ -7,10 +7,8 @@ elf/%.elf: $(CONFIG)
 obj/%.a: $(CONFIG)
 	@echo "  AR      $@"
 	$(Q)[ -d $(@D) ] || mkdir -p $(@D)
-	$(eval REMOVES := $(filter-out $(filter %.o,$^),$(shell $(AR) t $@)))
-	@echo "  AR d    $(REMOVES)"
-	$(Q)$(if $(REMOVES),rm $@,)
-	$(Q)$(AR) rcsT $@ $(filter %.o,$^)
+	$(Q)rm -f $@
+	$(Q)$(AR) rcs $@ $(filter %.o,$^)
 
 bin/%.bin: elf/%.elf $(CONFIG)
 	@echo "  OBJCOPY $@"
