@@ -38,7 +38,7 @@ jobs:
       id: func_test
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          tests func -e -v
+          tests func -e -v stm32f4discovery
     - name: Speed test
       id: speed_test
       shell: nix develop .#ci -c bash -e {0}
@@ -46,7 +46,7 @@ jobs:
         success()
         || steps.func_test.conclusion == 'failure'
       run: |
-          tests speed -e -v
+          tests speed -e -v stm32f4discovery
     - name: Stack test
       id: stack_test
       shell: nix develop .#ci -c bash -e {0}
@@ -55,7 +55,7 @@ jobs:
         || steps.func_test.conclusion == 'failure'
         || steps.speed_test.conclusion == 'failure'
       run: |
-          tests stack -e -v
+          tests stack -e -v stm32f4discovery
     - name: Nistkat test
       shell: nix develop .#ci -c bash -e {0}
       if: |
@@ -64,4 +64,4 @@ jobs:
         || steps.speed_test.conclusion == 'failure'
         || steps.stack_test.conclusion == 'failure'
       run: |
-        tests nistkat -e -v
+        tests nistkat -e -v stm32f4discovery
