@@ -102,6 +102,7 @@ def base_test(
     p = subprocess.run(
         ["make", f"NTESTS={ntests}", f"PLATFORM={platform}"]
         + [f"emulate {test_type}"] * emulate
+        + [f"{test_type}"] * (not emulate)
         + ["RNG=NISTKAT"] * (test_type == "nistkat")
         + ["RNG=NOTRND"] * (emulate and test_type != "nistkat")
         + ["RNG=HAL"] * (not emulate and test_type != "nistkat"),
