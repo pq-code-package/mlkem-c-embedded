@@ -10,6 +10,8 @@ import subprocess
 import click
 import logging
 import sys
+from enum import Enum
+from types import SimpleNamespace
 from functools import reduce
 
 # utilities for interacting with the board
@@ -78,108 +80,35 @@ def count(bstr, match):
     return str(bstr, encoding="utf8").count(match)
 
 
-def base_test(
-    test_type,
-    emulate,
-    platform,
-    ntests,
-    expect_proc,
-    actual_proc,
-    verbose,
-):
-    """
-    test_type: test, speed, stack, nistkat
-    expect_proc: scheme -> any
-    actual_proc: str -> any
-    """
-    config_logger(verbose)
-
-    if emulate:
-        platform = getattr(platform_map, platform).qemu_platform
-    else:
-        platform_cfg = getattr(platform_map, platform).openocd_cfg
-
-    p = subprocess.run(
-        ["make", f"NTESTS={ntests}", f"PLATFORM={platform}"]
-        + [f"emulate {test_type}"] * emulate
-        + [f"{test_type}"] * (not emulate)
-        + ["RNG=NISTKAT"] * (test_type == "nistkat")
-        + ["RNG=NOTRND"] * (emulate and test_type != "nistkat")
-        + ["RNG=HAL"] * (not emulate and test_type != "nistkat"),
-        stdout=subprocess.DEVNULL if not verbose else None,
-    )
-    logging.info(format(subprocess.list2cmdline(p.args)))
-
-    def check(file, expect, actual):
-        if actual != expect:
-            logging.error(
-                f"Check {file} failed, expecting {expect}, but getting actual {actual}"
-            )
-            sys.exit(1)
-        else:
-            logging.info(f"Check {file} passed")
-
-    if not emulate:
-        dev = usbdev()
-
-    for scheme in ["mlkem512", "mlkem768", "mlkem1024"]:
-        file = f"elf/{scheme}-{test_type}.elf"
-        expect = expect_proc(scheme)
-        if emulate:
-            actual = actual_proc(
-                subprocess.run(
-                    ["make", "emulate run", f"ELF_FILE={file}", f"PLATFORM={platform}"],
-                    capture_output=True,
-                ).stdout
-            )
-        else:
-            actual = actual_proc(asyncio.run(flush_and_read(dev, platform_cfg, file)))
-
-        check(file, expect, actual)
+# constants
 
 
-# cli utilities
+class RNG(Enum):
+    HAL = 1
+    NOTRAND = 2
+    NISTKAT = 3
 
-_shared_options = [
-    click.option(
-        "-v",
-        "--verbose",
-        is_flag=True,
-        show_default=True,
-        default=False,
-        type=bool,
-        help="Show verbose output or not",
-    ),
-    click.option(
-        "-e",
-        "--emulate",
-        is_flag=True,
-        show_default=True,
-        default=False,
-        type=bool,
-        help="Emulate on the QEMU or not",
-    ),
-]
-
-_shared_args = [
-    click.argument(
-        "platform",
-        nargs=1,
-        type=click.Choice(["stm32f4discovery"]),
-    )
-]
+    def __str__(self):
+        return self.name
 
 
-def add_options(options):
-    return lambda func: reduce(lambda f, o: o(f), reversed(options), func)
+class TEST_TYPE(Enum):
+    TEST = 1  # functional test
+    SPEED = 2
+    STACK = 3
+    NISTKAT = 4
+
+    def __str__(self):
+        return self.name.lower()
 
 
-def add_args(args):
-    return lambda func: reduce(lambda f, o: o(f), reversed(args), func)
+class PLATFORM(Enum):
+    STM32F4DISCOVERY = 1
+    MPS2_AN386 = 2
+    STM32F767ZI = 3
 
-
-# commands
-from types import SimpleNamespace
+    def __str__(self):
+        return self.name.lower().replace("_", "-")
 
 
 class RecursiveNamespace(SimpleNamespace):
@@ -202,12 +131,123 @@ class RecursiveNamespace(SimpleNamespace):
 
 platform_map = RecursiveNamespace(
     **{
-        "stm32f4discovery": {
-            "qemu_platform": "mps2-an386",
+        f"{PLATFORM.STM32F4DISCOVERY}": {
             "openocd_cfg": "board/stm32f4discovery.cfg",
-        }
+        },
+        f"{PLATFORM.MPS2_AN386}": {},
     }
 )
+
+
+def base_test(
+    test_type,
+    platform,
+    ntests,
+    expect_proc,
+    actual_proc,
+    verbose,
+):
+    """
+    test_type: test, speed, stack, nistkat
+    expect_proc: scheme -> any
+    actual_proc: str -> any
+    """
+    config_logger(verbose)
+
+    if not hasattr(platform_map, platform):
+        logging.error("unsupported platform {platform}")
+        sys.exit(1)
+
+    platform_cfg = None
+    if hasattr(getattr(platform_map, platform), "openocd_cfg"):
+        platform_cfg = getattr(platform_map, platform).openocd_cfg
+
+    if test_type == TEST_TYPE.NISTKAT:
+        rng = RNG.NISTKAT
+    elif (
+        platform_cfg is not None
+    ):  # if platform_cfg is provided, then it is not running on qemu
+        rng = RNG.HAL
+    else:
+        rng = RNG.NOTRAND
+
+    p = subprocess.run(
+        [
+            "make",
+            f"PLATFORM={platform}",
+            f"NTESTS={ntests}",
+            f"{test_type}",
+            f"RNG={rng}",
+        ],
+        stdout=subprocess.DEVNULL if not verbose else None,
+    )
+    logging.info(format(subprocess.list2cmdline(p.args)))
+
+    def check(file, expect, actual):
+        if actual != expect:
+            logging.error(
+                f"Check {file} failed, expecting {expect}, but getting actual {actual}"
+            )
+            sys.exit(1)
+        else:
+            logging.info(f"Check {file} passed")
+
+    if platform_cfg is not None:
+        dev = usbdev()
+
+    for scheme in ["mlkem512", "mlkem768", "mlkem1024"]:
+        file = f"elf/{scheme}-{test_type}.elf"
+        expect = expect_proc(scheme)
+        if platform_cfg is None:
+            actual = actual_proc(
+                subprocess.run(
+                    [
+                        "qemu-system-arm",
+                        "-machine",
+                        f"{platform}",
+                        "-nographic",
+                        "-semihosting",
+                        "-kernel",
+                        f"{file}",
+                    ],
+                    capture_output=True,
+                ).stdout
+            )
+        else:
+            actual = actual_proc(asyncio.run(flush_and_read(dev, platform_cfg, file)))
+
+        check(file, expect, actual)
+
+
+# cli utilities
+
+_shared_options = [
+    click.option(
+        "-v",
+        "--verbose",
+        is_flag=True,
+        show_default=True,
+        default=False,
+        type=bool,
+        help="Show verbose output or not",
+    ),
+]
+
+_shared_args = [
+    click.argument(
+        "platform",
+        nargs=1,
+        type=click.Choice(["stm32f4discovery", "mps2-an386"]),
+    )
+]
+
+
+def add_options(options):
+    return lambda func: reduce(lambda f, o: o(f), reversed(options), func)
+
+
+def add_args(args):
+    return lambda func: reduce(lambda f, o: o(f), reversed(args), func)
 
 
 @click.command(
@@ -222,7 +262,7 @@ platform_map = RecursiveNamespace(
     type=click.Path(),
     help="The binary hex file that you wanted to test.",
 )
-def run(platform, bin, verbose, emulate):
+def run(platform, bin, verbose):
     config_logger(True)
     dev = usbdev()
 
@@ -241,11 +281,10 @@ def run(platform, bin, verbose, emulate):
 @add_args(_shared_args)
 @add_options(_shared_options)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
-def func(platform, iterations, verbose, emulate):
+def func(platform, iterations, verbose):
     try:
         base_test(
-            "test",
-            emulate,
+            TEST_TYPE.TEST,
             platform,
             iterations,
             lambda _: iterations * 3,
@@ -260,11 +299,10 @@ def func(platform, iterations, verbose, emulate):
 @add_options(_shared_options)
 @add_options(_shared_args)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
-def speed(platform, iterations, verbose, emulate):
+def speed(platform, iterations, verbose):
     try:
         base_test(
-            "speed",
-            emulate,
+            TEST_TYPE.SPEED,
             platform,
             iterations,
             lambda _: iterations,
@@ -278,11 +316,10 @@ def speed(platform, iterations, verbose, emulate):
 @click.command(short_help="Run stack tests", context_settings={"show_default": True})
 @add_options(_shared_options)
 @add_options(_shared_args)
-def stack(platform, verbose, emulate):
+def stack(platform, verbose):
     try:
         base_test(
-            "stack",
-            emulate,
+            TEST_TYPE.STACK,
             platform,
             0,
             lambda _: 1,
@@ -296,7 +333,7 @@ def stack(platform, verbose, emulate):
 @click.command(short_help="Run nistkat tests", context_settings={"show_default": True})
 @add_options(_shared_options)
 @add_options(_shared_args)
-def nistkat(platform, verbose, emulate):
+def nistkat(platform, verbose):
     def scheme_hash(scheme):
         result = subprocess.run(
             [
@@ -316,8 +353,7 @@ def nistkat(platform, verbose, emulate):
 
     try:
         base_test(
-            "nistkat",
-            emulate,
+            TEST_TYPE.NISTKAT,
             platform,
             0,
             scheme_hash,
