@@ -17,6 +17,7 @@ jobs:
         script: |
           astyle --version
           arm-none-eabi-gcc --version
+          qemu-system-arm --version
     - name: Lint
       shell: nix develop .#ci -c bash -e {0}
       run: |
@@ -25,17 +26,7 @@ jobs:
       shell: nix develop .#ci -c bash -e {0}
       run: |
           make
-
-  emulate_test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Setup nix
-      uses: ./.github/actions/setup-nix
-      with:
-        script: |
-          arm-none-eabi-gcc --version
-          qemu-system-arm --version
+          make RNG=NISTKAT nistkat
     - name: Build for emulation on QEMU
       shell: nix develop .#ci -c bash -e {0}
       run: |
@@ -47,7 +38,7 @@ jobs:
       id: func_test
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          tests func -e -v
+          tests func -e -v stm32f4discovery
     - name: Speed test
       id: speed_test
       shell: nix develop .#ci -c bash -e {0}
@@ -55,7 +46,7 @@ jobs:
         success()
         || steps.func_test.conclusion == 'failure'
       run: |
-          tests speed -e -v
+          tests speed -e -v stm32f4discovery
     - name: Stack test
       id: stack_test
       shell: nix develop .#ci -c bash -e {0}
@@ -64,7 +55,7 @@ jobs:
         || steps.func_test.conclusion == 'failure'
         || steps.speed_test.conclusion == 'failure'
       run: |
-          tests stack -e -v
+          tests stack -e -v stm32f4discovery
     - name: Nistkat test
       shell: nix develop .#ci -c bash -e {0}
       if: |
@@ -73,5 +64,4 @@ jobs:
         || steps.speed_test.conclusion == 'failure'
         || steps.stack_test.conclusion == 'failure'
       run: |
-        make clean
-        tests nistkat -e -v
+        tests nistkat -e -v stm32f4discovery

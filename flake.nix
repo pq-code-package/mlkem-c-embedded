@@ -33,14 +33,12 @@
             qemu # 8.1.5
             libopencm3
 
-
             yq
             python311Packages.pyserial # 3.5
             python311Packages.click
           ];
         in
         {
-          packages.default = libopencm3;
           devShells.default = with pkgs; mkShellNoCC {
             packages = core ++ [
               direnv
@@ -53,6 +51,7 @@
             shellHook = ''
               export OPENCM3_DIR=${libopencm3}
               export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
+              eval "$(_TESTS_COMPLETE=source tests)"
             '';
           };
 
