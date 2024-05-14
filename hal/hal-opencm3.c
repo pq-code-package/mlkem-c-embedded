@@ -12,7 +12,15 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/flash.h>
 
-#if defined(STM32F407VG)
+#if defined(STM32F207ZG)
+#include <libopencm3/stm32/rng.h>
+
+#define SERIAL_GPIO GPIOD
+#define SERIAL_USART USART3
+#define SERIAL_PINS (GPIO8 | GPIO9)
+#define STM32
+#define NUCLEO_BOARD
+#elif defined(STM32F407VG)
 #include <libopencm3/stm32/rng.h>
 #define SERIAL_GPIO GPIOA
 #define SERIAL_USART USART2
@@ -91,13 +99,70 @@ static void clock_setup(enum clock_mode clock) {
     rcc_periph_clock_enable(RCC_RNG);
     flash_art_enable();
     flash_prefetch_enable();
+    #elif defined(STM32F2)
+    /* Some STM32 Platform */
+    rcc_periph_clock_enable(RCC_RNG);
+    rcc_periph_clock_enable(RCC_GPIOH);
+    /* All of them use an external oscillator with bypass. */
+    rcc_osc_off(RCC_HSE);
+    rcc_osc_bypass_enable(RCC_HSE);
+    rcc_osc_on(RCC_HSE);
+    rcc_wait_for_osc_ready(RCC_HSE);
+    # if defined(NUCLEO_BOARD)
+    /* NUCLEO-STM32F2 Board */
+    switch (clock) {
+    case CLOCK_BENCHMARK:
+        rcc_ahb_frequency = 30000000;
+        rcc_apb1_frequency = 30000000;
+        rcc_apb2_frequency = 30000000;
+        _clock_freq = 30000000;
+        rcc_set_hpre(RCC_CFGR_HPRE_DIV_4);
+        rcc_set_ppre1(RCC_CFGR_PPRE_DIV_NONE);
+        rcc_set_ppre2(RCC_CFGR_PPRE_DIV_NONE);
+        rcc_osc_off(RCC_PLL);
+        /* Configure the PLL oscillator (use CUBEMX tool). */
+        rcc_set_main_pll_hse(8, 240, 2, 5);
+        /* Enable PLL oscillator and wait for it to stabilize. */
+        rcc_osc_on(RCC_PLL);
+        rcc_wait_for_osc_ready(RCC_PLL);
+        flash_dcache_enable();
+        flash_icache_enable();
+        flash_set_ws(FLASH_ACR_LATENCY_0WS);
+        flash_prefetch_enable();
+        break;
+    case CLOCK_FAST:
+    default:
+        rcc_ahb_frequency = 120000000;
+        rcc_apb1_frequency = 30000000;
+        rcc_apb2_frequency = 60000000;
+        _clock_freq = 120000000;
+        rcc_set_hpre(RCC_CFGR_HPRE_DIV_NONE);
+        rcc_set_ppre1(RCC_CFGR_PPRE_DIV_4);
+        rcc_set_ppre2(RCC_CFGR_PPRE_DIV_2);
+        rcc_osc_off(RCC_PLL);
+        /* Configure the PLL oscillator (use CUBEMX tool). */
+        rcc_set_main_pll_hse(8, 240, 2, 5);
+        /* Enable PLL oscillator and wait for it to stabilize. */
+        rcc_osc_on(RCC_PLL);
+        rcc_wait_for_osc_ready(RCC_PLL);
+        flash_dcache_enable();
+        flash_icache_enable();
+        flash_set_ws(FLASH_ACR_LATENCY_3WS);
+        flash_prefetch_enable();
+        break;
+    }
+    rcc_set_sysclk_source(RCC_CFGR_SW_PLL);
+    rcc_wait_for_sysclk_status(RCC_PLL);
+    # else
+# error Unsupported STM32F2 Board
+    # endif
     #else
 #error Unsupported platform
     #endif
 }
 
 void usart_setup() {
-    #if defined(STM32F7)
+    #if defined(STM32F207ZG) || defined(STM32F7)
     rcc_periph_clock_enable(RCC_GPIOD);
     rcc_periph_clock_enable(RCC_USART3);
     #elif defined(DISCOVERY_BOARD)
