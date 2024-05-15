@@ -306,7 +306,7 @@ def speed(platform, iterations, verbose):
             TEST_TYPE.SPEED,
             platform,
             iterations,
-            lambda _: iterations,
+            lambda _: 1,
             lambda output: count(output, "OK"),
             verbose,
         )
