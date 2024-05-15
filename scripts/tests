@@ -45,10 +45,10 @@ def usbdev():
     return dev
 
 
-async def flash(cfg, bin):
+async def flash(cfg, bin, verbose):
     subprocess.run(
         ["openocd", "-f", cfg, "-c", f"program {bin} verify reset exit"],
-        stdout=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL if not verbose else None,
         stderr=subprocess.STDOUT,
     )
 
@@ -61,9 +61,9 @@ async def read(dev):
     return x[1:-1]
 
 
-async def flush_and_read(dev, cfg, bin):
+async def flash_and_read(dev, cfg, bin, verbose):
     # assume the first result is the usb device to use
-    asyncio.create_task(flash(cfg, bin))
+    asyncio.create_task(flash(cfg, bin, verbose))
     read_task = asyncio.create_task(read(dev))
     result = await read_task
     logging.debug(str(result, encoding="utf-8"))
@@ -221,7 +221,9 @@ def base_test(
                 ).stdout
             )
         else:
-            actual = actual_proc(asyncio.run(flush_and_read(dev, platform_cfg, file)))
+            actual = actual_proc(
+                asyncio.run(flash_and_read(dev, platform_cfg, file, verbose))
+            )
 
         check(file, expect, actual)
 
@@ -275,7 +277,9 @@ def run(platform, bin, verbose):
 
     try:
         result = asyncio.run(
-            flush_and_read(dev, getattr(platform_map, platform).openocd_cfg, bin)
+            flash_and_read(
+                dev, getattr(platform_map, platform).openocd_cfg, bin, verbose
+            )
         )
         logging.info(result)
     except asyncio.CancelledError:
