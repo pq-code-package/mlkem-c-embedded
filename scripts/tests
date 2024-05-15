@@ -240,14 +240,11 @@ _shared_options = [
         type=bool,
         help="Show verbose output or not",
     ),
-]
-
-_shared_args = [
     click.argument(
         "platform",
         nargs=1,
         type=click.Choice([f"{p}" for p in PLATFORM]),
-    )
+    ),
 ]
 
 
@@ -255,15 +252,10 @@ def add_options(options):
     return lambda func: reduce(lambda f, o: o(f), reversed(options), func)
 
 
-def add_args(args):
-    return lambda func: reduce(lambda f, o: o(f), reversed(args), func)
-
-
 @click.command(
     short_help="Run for the specified platform and hex file without parsing the output",
     context_settings={"show_default": True},
 )
-@add_args(_shared_args)
 @add_options(_shared_options)
 @click.option(
     "-b",
@@ -289,7 +281,6 @@ def run(platform, bin, verbose):
 @click.command(
     short_help="Run functional tests", context_settings={"show_default": True}
 )
-@add_args(_shared_args)
 @add_options(_shared_options)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
 def func(platform, iterations, verbose):
@@ -308,7 +299,6 @@ def func(platform, iterations, verbose):
 
 @click.command(short_help="Run speed tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-@add_options(_shared_args)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
 def speed(platform, iterations, verbose):
     try:
@@ -326,7 +316,6 @@ def speed(platform, iterations, verbose):
 
 @click.command(short_help="Run stack tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-@add_options(_shared_args)
 def stack(platform, verbose):
     try:
         base_test(
@@ -343,7 +332,6 @@ def stack(platform, verbose):
 
 @click.command(short_help="Run nistkat tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-@add_options(_shared_args)
 def nistkat(platform, verbose):
     def scheme_hash(scheme):
         result = subprocess.run(
