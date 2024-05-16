@@ -37,6 +37,7 @@ jobs:
 
           make_platform stm32f4discovery
           make_platform nucleo-f767zi
+          make_platform nucleo-f207zg
 
     - name: Build for emulation on QEMU
       shell: nix develop .#ci -c bash -e {0}

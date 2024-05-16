@@ -19,7 +19,7 @@
       perSystem = { pkgs, ... }:
         let
           libopencm3 = pkgs.callPackage ./libopencm3.nix {
-            targets = [ "stm32/f4" "stm32/f7" ];
+            targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
           };
           core = builtins.attrValues {
             libopencm3 = libopencm3;
@@ -56,7 +56,7 @@
             shellHook = ''
               export OPENCM3_DIR=${libopencm3}
               export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
-              eval "$(_TESTS_COMPLETE=source tests)"
+              eval "$(_TESTS_COMPLETE=bash_source tests)"
             '';
           };
 

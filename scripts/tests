@@ -11,6 +11,7 @@ import click
 import logging
 import sys
 import re
+import os.path
 from enum import Enum
 from types import SimpleNamespace
 from functools import reduce
@@ -110,6 +111,7 @@ class PLATFORM(Enum):
     STM32F4DISCOVERY = 1
     MPS2_AN386 = 2
     NUCLEO_F767ZI = 3
+    NUCLEO_F207ZG = 4
 
     def __str__(self):
         return self.name.lower().replace("_", "-")
@@ -133,8 +135,12 @@ class RecursiveNamespace(SimpleNamespace):
                 setattr(self, key, list(map(self.map_entry, val)))
 
 
+ROOT = os.path.dirname(os.path.dirname(__file__))
 platform_map = RecursiveNamespace(
     **{
+        f"{PLATFORM.NUCLEO_F207ZG}": {
+            "openocd_cfg": f"{ROOT}/hal/nucleo_f207zg.cfg",
+        },
         f"{PLATFORM.STM32F4DISCOVERY}": {
             "openocd_cfg": "board/stm32f4discovery.cfg",
         },
