@@ -120,7 +120,6 @@ class PLATFORM(Enum):
 
 
 class RecursiveNamespace(SimpleNamespace):
-
     @staticmethod
     def map_entry(entry):
         if isinstance(entry, dict):
