@@ -21,8 +21,12 @@
           libopencm3 = pkgs.callPackage ./libopencm3.nix {
             targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
           };
+          mbed-os = pkgs.callPackage ./mbed-os.nix {
+            targets = [ "TARGET_MPS2_M3" "TARGET_MPS2_M4" "TARGET_MPS2_M7" ];
+          };
           core = builtins.attrValues {
             libopencm3 = libopencm3;
+            mbed-os = mbed-os;
 
             inherit (pkgs)
               # formatter & linters
@@ -56,6 +60,7 @@
 
             shellHook = ''
               export OPENCM3_DIR=${libopencm3}
+              export MBED_OS_DIR=${mbed-os}
               export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
               eval "$(_TESTS_COMPLETE=bash_source tests)"
             '';
@@ -66,6 +71,7 @@
 
             shellHook = ''
               export OPENCM3_DIR=${libopencm3}
+              export MBED_OS_DIR=${mbed-os}
               export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
             '';
           };
