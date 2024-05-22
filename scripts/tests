@@ -36,13 +36,15 @@ def serial_ports():
     return ports
 
 
-def usbdev():
-    port = next(iter(serial_ports()), None)
+def default_serial_port():
+    return next(iter(serial_ports()), None)
 
-    if port is None:
+
+def usbdev(uart):
+    if uart is None:
         raise DeviceError("No available usb device")
 
-    dev = serial.Serial(port, 38400)
+    dev = serial.Serial(uart, 38400)
     return dev
 
 
@@ -159,6 +161,7 @@ def base_test(
     expect_proc,
     actual_proc,
     verbose,
+    uart,
 ):
     """
     test_type: test, speed, stack, nistkat
@@ -206,7 +209,7 @@ def base_test(
             logging.info(f"Check {file} passed")
 
     if platform_cfg is not None:
-        dev = usbdev()
+        dev = usbdev(uart)
 
     for scheme in ["mlkem512", "mlkem768", "mlkem1024"]:
         file = f"elf/{scheme}-{test_type}.elf"
@@ -246,6 +249,14 @@ _shared_options = [
         type=bool,
         help="Show verbose output or not",
     ),
+    click.option(
+        "-u",
+        "--uart",
+        type=click.Path(),
+        show_default=True,
+        default=default_serial_port(),
+        help="TTY serial device for UART, default to the 1st serial device connected to your board or an empty string",
+    ),
     click.argument(
         "platform",
         nargs=1,
@@ -269,9 +280,9 @@ def add_options(options):
     type=click.Path(),
     help="The binary hex file that you wanted to test.",
 )
-def run(platform, bin, verbose):
+def run(platform, bin, verbose, uart):
     config_logger(True)
-    dev = usbdev()
+    dev = usbdev(uart)
 
     try:
         result = asyncio.run(
@@ -289,7 +300,7 @@ def run(platform, bin, verbose):
 )
 @add_options(_shared_options)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
-def func(platform, iterations, verbose):
+def func(platform, iterations, verbose, uart):
     try:
         base_test(
             TEST_TYPE.TEST,
@@ -298,6 +309,7 @@ def func(platform, iterations, verbose):
             lambda _: iterations * 3,
             lambda output: count(output, "OK"),
             verbose,
+            uart,
         )
     except asyncio.CancelledError:
         pass
@@ -306,7 +318,7 @@ def func(platform, iterations, verbose):
 @click.command(short_help="Run speed tests", context_settings={"show_default": True})
 @add_options(_shared_options)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
-def speed(platform, iterations, verbose):
+def speed(platform, iterations, verbose, uart):
     try:
         base_test(
             TEST_TYPE.SPEED,
@@ -315,6 +327,7 @@ def speed(platform, iterations, verbose):
             lambda _: 1,
             lambda output: count(output, "OK"),
             verbose,
+            uart,
         )
     except asyncio.CancelledError:
         pass
@@ -322,7 +335,7 @@ def speed(platform, iterations, verbose):
 
 @click.command(short_help="Run stack tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-def stack(platform, verbose):
+def stack(platform, verbose, uart):
     try:
         base_test(
             TEST_TYPE.STACK,
@@ -331,6 +344,7 @@ def stack(platform, verbose):
             lambda _: 1,
             lambda output: count(output, "OK"),
             verbose,
+            uart,
         )
     except asyncio.CancelledError:
         pass
@@ -338,7 +352,7 @@ def stack(platform, verbose):
 
 @click.command(short_help="Run nistkat tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-def nistkat(platform, verbose):
+def nistkat(platform, verbose, uart):
     def scheme_hash(scheme):
         result = subprocess.run(
             [
@@ -364,6 +378,7 @@ def nistkat(platform, verbose):
             scheme_hash,
             lambda output: str(output, encoding="utf-8").strip().lower(),
             verbose,
+            uart,
         )
     except asyncio.CancelledError:
         pass
