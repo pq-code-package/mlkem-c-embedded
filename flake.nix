@@ -38,6 +38,7 @@
               yq;
 
             inherit (pkgs.python311Packages)
+              black
               pyserial# 3.5
               click;
           };
