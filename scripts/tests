@@ -113,7 +113,9 @@ class PLATFORM(Enum):
     STM32F4DISCOVERY = 1
     MPS2_AN386 = 2
     NUCLEO_F767ZI = 3
-    NUCLEO_F207ZG = 4
+    MPS2_AN500 = 4
+    NUCLEO_F207ZG = 5
+    MPS2_AN385 = 6
 
     def __str__(self):
         return self.name.lower().replace("_", "-")
@@ -149,6 +151,8 @@ platform_map = RecursiveNamespace(
             "openocd_cfg": "board/st_nucleo_f7.cfg",
         },
         f"{PLATFORM.MPS2_AN386}": {},
+        f"{PLATFORM.MPS2_AN385}": {},
+        f"{PLATFORM.MPS2_AN500}": {},
     }
 )
 

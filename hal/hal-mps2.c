@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <hal.h>
+#if defined(MPS2_AN385)
+#include <CMSDK_CM3.h>
+#elif defined(MPS2_AN386)
 #include <CMSDK_CM4.h>
+#elif defined(MPS2_AN500)
+#include <CMSDK_CM7.h>
+#else
+#error Unsupported mps2 board
+#endif
 
 #define BAUD 38400
 

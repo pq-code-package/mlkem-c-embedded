@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#if !defined(MPS2_AN386)
+#if !(defined(MPS2_AN385) || defined(MPS2_AN386) || defined(MPS2_AN500))
 #define SERIAL_MARKER() {\
         hal_send_str("$");\
     }
