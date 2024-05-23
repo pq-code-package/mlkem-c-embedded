@@ -113,7 +113,9 @@ class PLATFORM(Enum):
     STM32F4DISCOVERY = 1
     MPS2_AN386 = 2
     NUCLEO_F767ZI = 3
-    NUCLEO_F207ZG = 4
+    MPS2_AN500 = 4
+    NUCLEO_F207ZG = 5
+    MPS2_AN385 = 6
 
     def __str__(self):
         return self.name.lower().replace("_", "-")
@@ -149,6 +151,8 @@ platform_map = RecursiveNamespace(
             "openocd_cfg": "board/st_nucleo_f7.cfg",
         },
         f"{PLATFORM.MPS2_AN386}": {},
+        f"{PLATFORM.MPS2_AN385}": {},
+        f"{PLATFORM.MPS2_AN500}": {},
     }
 )
 
@@ -214,20 +218,20 @@ def base_test(
         file = f"elf/{scheme}-{test_type}.elf"
         expect = expect_proc(scheme)
         if platform_cfg is None:
-            actual = actual_proc(
-                subprocess.run(
-                    [
-                        "qemu-system-arm",
-                        "-machine",
-                        f"{platform}",
-                        "-nographic",
-                        "-semihosting",
-                        "-kernel",
-                        f"{file}",
-                    ],
-                    capture_output=True,
-                ).stdout
-            )
+            raw = subprocess.run(
+                [
+                    "qemu-system-arm",
+                    "-machine",
+                    f"{platform}",
+                    "-nographic",
+                    "-semihosting",
+                    "-kernel",
+                    f"{file}",
+                ],
+                capture_output=True,
+            ).stdout
+            logging.debug(format(str(raw, encoding="utf-8")))
+            actual = actual_proc(raw)
         else:
             actual = actual_proc(
                 asyncio.run(flash_and_read(dev, platform_cfg, file, verbose))
@@ -383,8 +387,15 @@ def nistkat(platform, verbose, uart):
         pass
 
 
-@click.group()
-def cli():
+@click.group(invoke_without_command=True)
+@click.option(
+    "--list-platforms",
+    is_flag=True,
+    help="List the supported platforms",
+)
+def cli(list_platforms):
+    if list_platforms:
+        print(*[f"{p}" for p in PLATFORM], sep="\n")
     pass
 
 
