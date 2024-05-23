@@ -10,6 +10,10 @@ import subprocess
 import click
 import logging
 import sys
+import re
+import os.path
+from enum import Enum
+from types import SimpleNamespace
 from functools import reduce
 
 # utilities for interacting with the board
@@ -20,29 +24,34 @@ def serial_ports():
     if platform.system() == "Windows":
         ports = ["COM%s" % (i + 1) for i in range(256)]
     elif platform.system() == "Darwin":
-        ports = glob.glob("/dev/tty.usbserial*")
+        ports = glob.glob("/dev/tty.usb*")
+
+        r = re.compile(".*tty.usb(serial-|modem)[0-9]+$")
+        ports = [p for p in ports if r.match(p)]
     elif platform.system() == "Linux":
-        ports = glob.glob("/dev/ttyUSB*")
+        ports = glob.glob("/dev/ttyUSB*") + glob.glob("/dev/ttyACM*")
     else:
         raise PlatformError("Unsupported platform")
 
     return ports
 
 
-def usbdev():
-    port = next(iter(serial_ports()), None)
+def default_serial_port():
+    return next(iter(serial_ports()), None)
 
-    if port is None:
+
+def usbdev(uart):
+    if uart is None:
         raise DeviceError("No available usb device")
 
-    dev = serial.Serial(port, 38400)
+    dev = serial.Serial(uart, 38400)
     return dev
 
 
-async def flash(cfg, bin):
+async def flash(cfg, bin, verbose):
     subprocess.run(
         ["openocd", "-f", cfg, "-c", f"program {bin} verify reset exit"],
-        stdout=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL if not verbose else None,
         stderr=subprocess.STDOUT,
     )
 
@@ -55,9 +64,9 @@ async def read(dev):
     return x[1:-1]
 
 
-async def flush_and_read(dev, cfg, bin):
+async def flash_and_read(dev, cfg, bin, verbose):
     # assume the first result is the usb device to use
-    asyncio.create_task(flash(cfg, bin))
+    asyncio.create_task(flash(cfg, bin, verbose))
     read_task = asyncio.create_task(read(dev))
     result = await read_task
     logging.debug(str(result, encoding="utf-8"))
@@ -78,8 +87,80 @@ def count(bstr, match):
     return str(bstr, encoding="utf8").count(match)
 
 
+# constants
+
+
+class RNG(Enum):
+    HAL = 1
+    NOTRAND = 2
+    NISTKAT = 3
+
+    def __str__(self):
+        return self.name
+
+
+class TEST_TYPE(Enum):
+    TEST = 1  # functional test
+    SPEED = 2
+    STACK = 3
+    NISTKAT = 4
+
+    def __str__(self):
+        return self.name.lower()
+
+
+class PLATFORM(Enum):
+    STM32F4DISCOVERY = 1
+    MPS2_AN386 = 2
+    NUCLEO_F767ZI = 3
+    NUCLEO_F207ZG = 4
+
+    def __str__(self):
+        return self.name.lower().replace("_", "-")
+
+
+class RecursiveNamespace(SimpleNamespace):
+    @staticmethod
+    def map_entry(entry):
+        if isinstance(entry, dict):
+            return RecursiveNamespace(**entry)
+
+        return entry
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        for key, val in kwargs.items():
+            if type(val) == dict:
+                setattr(self, key, RecursiveNamespace(**val))
+            elif type(val) == list:
+                setattr(self, key, list(map(self.map_entry, val)))
+
+
+ROOT = os.path.dirname(os.path.dirname(__file__))
+platform_map = RecursiveNamespace(
+    **{
+        f"{PLATFORM.NUCLEO_F207ZG}": {
+            "openocd_cfg": f"{ROOT}/hal/nucleo_f207zg.cfg",
+        },
+        f"{PLATFORM.STM32F4DISCOVERY}": {
+            "openocd_cfg": "board/stm32f4discovery.cfg",
+        },
+        f"{PLATFORM. NUCLEO_F767ZI}": {
+            "openocd_cfg": "board/st_nucleo_f7.cfg",
+        },
+        f"{PLATFORM.MPS2_AN386}": {},
+    }
+)
+
+
 def base_test(
-    test_type, emulate, platform_cfg, ntests, expect_proc, actual_proc, verbose
+    test_type,
+    platform,
+    ntests,
+    expect_proc,
+    actual_proc,
+    verbose,
+    uart,
 ):
     """
     test_type: test, speed, stack, nistkat
@@ -88,18 +169,34 @@ def base_test(
     """
     config_logger(verbose)
 
-    if emulate:
-        subprocess.run(
-            ["make", f"NTESTS={ntests}", f"emulate {test_type}"],
-            stdout=subprocess.DEVNULL,
-        )
+    if not hasattr(platform_map, platform):
+        logging.error("unsupported platform {platform}")
+        sys.exit(1)
+
+    platform_cfg = None
+    if hasattr(getattr(platform_map, platform), "openocd_cfg"):
+        platform_cfg = getattr(platform_map, platform).openocd_cfg
+
+    if test_type == TEST_TYPE.NISTKAT:
+        rng = RNG.NISTKAT
+    elif (
+        platform_cfg is not None
+    ):  # if platform_cfg is provided, then it is not running on qemu
+        rng = RNG.HAL
     else:
-        subprocess.run(
-            ["make", f"{test_type}"]
-            + [f"NTESTS={ntests}"] * (test_type != "nistkat")
-            + ["KATRNG=NIST"] * (test_type == "nistkat"),
-            stdout=subprocess.DEVNULL,
-        )
+        rng = RNG.NOTRAND
+
+    p = subprocess.run(
+        [
+            "make",
+            f"PLATFORM={platform}",
+            f"NTESTS={ntests}",
+            f"{test_type}",
+            f"RNG={rng}",
+        ],
+        stdout=subprocess.DEVNULL if not verbose else None,
+    )
+    logging.info(format(subprocess.list2cmdline(p.args)))
 
     def check(file, expect, actual):
         if actual != expect:
@@ -110,20 +207,31 @@ def base_test(
         else:
             logging.info(f"Check {file} passed")
 
-    if not emulate:
-        dev = usbdev()
+    if platform_cfg is not None:
+        dev = usbdev(uart)
 
     for scheme in ["mlkem512", "mlkem768", "mlkem1024"]:
         file = f"elf/{scheme}-{test_type}.elf"
         expect = expect_proc(scheme)
-        if emulate:
+        if platform_cfg is None:
             actual = actual_proc(
                 subprocess.run(
-                    ["make", "emulate run", f"ELF_FILE={file}"], capture_output=True
+                    [
+                        "qemu-system-arm",
+                        "-machine",
+                        f"{platform}",
+                        "-nographic",
+                        "-semihosting",
+                        "-kernel",
+                        f"{file}",
+                    ],
+                    capture_output=True,
                 ).stdout
             )
         else:
-            actual = actual_proc(asyncio.run(flush_and_read(dev, platform_cfg, file)))
+            actual = actual_proc(
+                asyncio.run(flash_and_read(dev, platform_cfg, file, verbose))
+            )
 
         check(file, expect, actual)
 
@@ -131,13 +239,6 @@ def base_test(
 # cli utilities
 
 _shared_options = [
-    click.option(
-        "-cfg",
-        "--platform-cfg",
-        default="hal/stm32f4discovery.cfg",
-        type=click.Path(),
-        help="Configuration file of the specified platform",
-    ),
     click.option(
         "-v",
         "--verbose",
@@ -148,22 +249,23 @@ _shared_options = [
         help="Show verbose output or not",
     ),
     click.option(
-        "-e",
-        "--emulate",
-        is_flag=True,
+        "-u",
+        "--uart",
+        type=click.Path(),
         show_default=True,
-        default=False,
-        type=bool,
-        help="Emulate on the QEMU or not",
+        default=default_serial_port(),
+        help="TTY serial device for UART, default to the 1st serial device connected to your board or an empty string",
+    ),
+    click.argument(
+        "platform",
+        nargs=1,
+        type=click.Choice([f"{p}" for p in PLATFORM]),
     ),
 ]
 
 
 def add_options(options):
     return lambda func: reduce(lambda f, o: o(f), reversed(options), func)
-
-
-# commands
 
 
 @click.command(
@@ -177,12 +279,16 @@ def add_options(options):
     type=click.Path(),
     help="The binary hex file that you wanted to test.",
 )
-def run(platform_cfg, bin, verbose, emulate):
+def run(platform, bin, verbose, uart):
     config_logger(True)
-    dev = usbdev()
+    dev = usbdev(uart)
 
     try:
-        result = asyncio.run(flush_and_read(dev, platform_cfg, bin))
+        result = asyncio.run(
+            flash_and_read(
+                dev, getattr(platform_map, platform).openocd_cfg, bin, verbose
+            )
+        )
         logging.info(result)
     except asyncio.CancelledError:
         pass
@@ -193,16 +299,16 @@ def run(platform_cfg, bin, verbose, emulate):
 )
 @add_options(_shared_options)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
-def func(platform_cfg, iterations, verbose, emulate):
+def func(platform, iterations, verbose, uart):
     try:
         base_test(
-            "test",
-            emulate,
-            platform_cfg,
+            TEST_TYPE.TEST,
+            platform,
             iterations,
             lambda _: iterations * 3,
             lambda output: count(output, "OK"),
             verbose,
+            uart,
         )
     except asyncio.CancelledError:
         pass
@@ -211,16 +317,16 @@ def func(platform_cfg, iterations, verbose, emulate):
 @click.command(short_help="Run speed tests", context_settings={"show_default": True})
 @add_options(_shared_options)
 @click.option("-i", "--iterations", default=1, type=int, help="Number of tests")
-def speed(platform_cfg, iterations, verbose, emulate):
+def speed(platform, iterations, verbose, uart):
     try:
         base_test(
-            "speed",
-            emulate,
-            platform_cfg,
+            TEST_TYPE.SPEED,
+            platform,
             iterations,
-            lambda _: iterations,
+            lambda _: 1,
             lambda output: count(output, "OK"),
             verbose,
+            uart,
         )
     except asyncio.CancelledError:
         pass
@@ -228,16 +334,16 @@ def speed(platform_cfg, iterations, verbose, emulate):
 
 @click.command(short_help="Run stack tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-def stack(platform_cfg, verbose, emulate):
+def stack(platform, verbose, uart):
     try:
         base_test(
-            "stack",
-            emulate,
-            platform_cfg,
+            TEST_TYPE.STACK,
+            platform,
             0,
             lambda _: 1,
             lambda output: count(output, "OK"),
             verbose,
+            uart,
         )
     except asyncio.CancelledError:
         pass
@@ -245,7 +351,7 @@ def stack(platform_cfg, verbose, emulate):
 
 @click.command(short_help="Run nistkat tests", context_settings={"show_default": True})
 @add_options(_shared_options)
-def nistkat(platform_cfg, verbose, emulate):
+def nistkat(platform, verbose, uart):
     def scheme_hash(scheme):
         result = subprocess.run(
             [
@@ -265,13 +371,13 @@ def nistkat(platform_cfg, verbose, emulate):
 
     try:
         base_test(
-            "nistkat",
-            emulate,
-            platform_cfg,
+            TEST_TYPE.NISTKAT,
+            platform,
             0,
             scheme_hash,
             lambda output: str(output, encoding="utf-8").strip().lower(),
             verbose,
+            uart,
         )
     except asyncio.CancelledError:
         pass

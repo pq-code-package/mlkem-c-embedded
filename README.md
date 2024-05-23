@@ -76,7 +76,7 @@ For example,
 - `make [PLATFORM=<PLATFORM_NAME>] test` assembles all binaries for functional tests.
 - `make [PLATFORM=<PLATFORM_NAME>] speed` assembles all binaries for speed benchmarking
 - `make [PLATFORM=<PLATFORM_NAME>] stack` assembles all binaries for stack benchmarking
-- `make [PLATFORM=<PLATFORM_NAME>] KATRNG=NIST nistkat` assembles all binaries for nistkat
+- `make [PLATFORM=<PLATFORM_NAME>] RNG=NISTKAT nistkat` assembles all binaries for nistkat
 - `make [PLATFORM=<PLATFORM_NAME>] (all)` assembles all the above targets for all parameter sets.
 
 - `make emulate` build binaries for emulating `mps2-an386` on `QEMU` of test, speed, stack

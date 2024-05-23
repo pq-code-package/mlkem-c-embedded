@@ -26,7 +26,7 @@ stdenvNoCC.mkDerivation rec {
   '';
   dontConfigure = true;
   buildPhase = ''
-    make ${if targets == [] then "lib" else "TARGETS=${lib.concatStrings targets}"}
+    make ${if targets == [] then "lib" else "TARGETS='${lib.concatMapStrings (t: t + " ") targets}'"}
   '';
   installPhase = ''
     runHook preInstall
@@ -43,7 +43,7 @@ stdenvNoCC.mkDerivation rec {
   dontStrip = true;
   noAuditTmpdir = true;
 
-  meta = with lib; {
+  meta = {
     description = "Open source ARM Cortex-M microcontroller library";
     homepage = "https://libopencm3.org/";
   };

@@ -21,14 +21,13 @@ nistkat: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-nistkat)
 
 emulate%: PLATFORM = mps2-an386
 emulate%: NTESTS = 10
+emulate%: override RNG = NOTRAND
 
-emulate\ nistkat: KATRNG=NIST
-emulate\ nistkat:
-	$(Q)$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS) KATRNG=$(KATRNG) nistkat
+emulate\ nistkat: override RNG = NISTKAT
 
 # emulate for test, speed, stack
 emulate%:
-	$(Q)$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS) $*
+	$(Q)$(MAKE) PLATFORM=$(PLATFORM) NTESTS=$(NTESTS) RNG=$(RNG) $*
 
 emulate\ run: PLATFORM=mps2-an386
 emulate\ run:

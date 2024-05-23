@@ -19,44 +19,49 @@
       perSystem = { pkgs, ... }:
         let
           libopencm3 = pkgs.callPackage ./libopencm3.nix {
-            targets = [ "stm32/f4" ];
+            targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
           };
-          core = with pkgs; [
-            # formatter & linters
-            nixpkgs-fmt
-            shfmt
-            astyle # 3.4.10
+          core = builtins.attrValues {
+            libopencm3 = libopencm3;
 
-            # build dependencies
-            gcc-arm-embedded-13 # arm-gnu-toolchain-13.2.rel1
-            python311
-            qemu # 8.1.5
-            libopencm3
+            inherit (pkgs)
+              # formatter & linters
+              nixpkgs-fmt
+              shfmt
+              astyle# 3.4.10
 
+              # build dependencies
+              gcc-arm-embedded-13# arm-gnu-toolchain-13.2.rel1
+              python311
+              qemu# 8.1.5
 
-            yq
-            python311Packages.pyserial # 3.5
-            python311Packages.click
-          ];
+              yq;
+
+            inherit (pkgs.python311Packages)
+              black
+              pyserial# 3.5
+              click;
+          };
         in
         {
-          packages.default = libopencm3;
-          devShells.default = with pkgs; mkShellNoCC {
-            packages = core ++ [
-              direnv
-              nix-direnv
+          devShells.default = pkgs.mkShellNoCC {
+            packages = core ++ builtins.attrValues {
+              inherit (pkgs)
+                direnv
+                nix-direnv
 
-              # debug dependencies
-              openocd # 0.12.0
-            ];
+                # debug dependencies
+                openocd; # 0.12.0
+            };
 
             shellHook = ''
               export OPENCM3_DIR=${libopencm3}
               export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
+              eval "$(_TESTS_COMPLETE=bash_source tests)"
             '';
           };
 
-          devShells.ci = with pkgs; mkShellNoCC {
+          devShells.ci = pkgs.mkShellNoCC {
             packages = core;
 
             shellHook = ''

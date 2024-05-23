@@ -18,7 +18,7 @@ checkerr()
 
   if [[ ${#1} != 0 ]]; then
     echo "$1" | while read -r file line; do
-      echo "::error file={$file},line={${line:-1}},title={Format error}::$file require to be formatted"
+      echo "::error file=$file,line=${line:-1},title=Format error::$file require to be formatted"
     done
     SUCCESS=false
   fi
@@ -33,6 +33,13 @@ echo "::endgroup::"
 
 echo "::group::Linting shell scripts with shfmt"
 checkerr "$(shfmt -s -l -i 2 -ci -fn $(shfmt -f $(git grep -l '' :/)))"
+echo "::endgroup::"
+
+echo "::group::Linting python scripts with black"
+if ! diff=$(black --check --diff -q --include scripts/tests "$ROOT"); then
+  echo "::error title=Format error::$diff"
+  SUCCESS=false
+fi
 echo "::endgroup::"
 
 echo "::group::Linting c files with astyle"
