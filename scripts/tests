@@ -218,20 +218,20 @@ def base_test(
         file = f"elf/{scheme}-{test_type}.elf"
         expect = expect_proc(scheme)
         if platform_cfg is None:
-            actual = actual_proc(
-                subprocess.run(
-                    [
-                        "qemu-system-arm",
-                        "-machine",
-                        f"{platform}",
-                        "-nographic",
-                        "-semihosting",
-                        "-kernel",
-                        f"{file}",
-                    ],
-                    capture_output=True,
-                ).stdout
-            )
+            raw = subprocess.run(
+                [
+                    "qemu-system-arm",
+                    "-machine",
+                    f"{platform}",
+                    "-nographic",
+                    "-semihosting",
+                    "-kernel",
+                    f"{file}",
+                ],
+                capture_output=True,
+            ).stdout
+            logging.debug(format(str(raw, encoding="utf-8")))
+            actual = actual_proc(raw)
         else:
             actual = actual_proc(
                 asyncio.run(flash_and_read(dev, platform_cfg, file, verbose))
