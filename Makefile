@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: Apache-2.0
-# temporary Makefile to be replaced by Arm cross-compilation
 
 .PHONY: all
 
