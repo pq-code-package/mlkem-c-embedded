@@ -67,21 +67,17 @@ For further details, please refer to [scripts/README.md](scripts/README.md)
 
 ## Running tests and benchmarks
 
-The build system compiles tests and benchmarks for each mlkem parameter set on specified platform, currently supported platform includes `stm32f4discovery` and `mps2-an386` (could be simulated with the `QEMU` simulator).
+The build system compiles tests and benchmarks for each mlkem parameter set on specified platform, supported platform can be found by running `tests --list-platforms`.
 The PLATFORM configuration is optional, with the default platform set to `stm32f4discovery`.
 
 For example,
-- `make [PLATFORM=<PLATFORM_NAME>] bin/mlkem768-test.hex` assembles the `mlkem768` binary performing functional tests.
-- `make [PLATFORM=<PLATFORM_NAME>] bin/mlkem1024-speed.hex` assembles the `mlkem-1024` speed benchmark binary.
-- `make [PLATFORM=<PLATFORM_NAME>] test` assembles all binaries for functional tests.
-- `make [PLATFORM=<PLATFORM_NAME>] speed` assembles all binaries for speed benchmarking
-- `make [PLATFORM=<PLATFORM_NAME>] stack` assembles all binaries for stack benchmarking
+- `make [PLATFORM=<PLATFORM_NAME>] [RNG=HAL|NOTRAND] test` assembles all binaries for functional tests.
+- `make [PLATFORM=<PLATFORM_NAME>] [RNG=HAL|NOTRAND] speed` assembles all binaries for speed benchmarking
+- `make [PLATFORM=<PLATFORM_NAME>] [RNG=HAL|NOTRAND] stack` assembles all binaries for stack benchmarking
 - `make [PLATFORM=<PLATFORM_NAME>] RNG=NISTKAT nistkat` assembles all binaries for nistkat
 - `make [PLATFORM=<PLATFORM_NAME>] (all)` assembles all the above targets for all parameter sets.
 
-- `make emulate` build binaries for emulating `mps2-an386` on `QEMU` of test, speed, stack
-- `make "emulate [test|speed|stack|nistkat]"` build binaries of test, speed, stack or nistkat for emulating `mps2-an386` on `QEMU` 
-- `make "emulate run" ELF_FILE=<ELF_FILE_NAME>` run emulatation for the file on `QEMU`
+- `make emulate` run emulatation for the binary file on `QEMU`
 - `make clean` cleans up intermediate artifacts
 
 ### Manual testing on board
@@ -104,6 +100,7 @@ Make sure to run `make clean` between running tests on QEMU or on board or runni
 Usage: tests [OPTIONS] COMMAND [ARGS]...
 
 Options:
+  --list-platforms  List the supported platforms
   --help  Show this message and exit.
 
 Commands:
@@ -119,13 +116,14 @@ func/speed tests depends on the iteration parameter, which is passed to the test
 
 ```
 ▶ tests func --help
-Usage: tests func [OPTIONS]
+Usage: tests func [OPTIONS] {stm32f4discovery|mps2-an386|nucleo-f767zi|mps2-an
+                  500|nucleo-f207zg|mps2-an385}
 
 Options:
-  -cfg, --platform-cfg PATH  Configuration file of the specified platform
-                             [default: hal/stm32f4discovery.cfg]
-  -v, --verbose              Show verbose output or not
-  -e, --emulate              Emulate on the QEMU or not
-  -i, --iterations INTEGER   Number of tests  [default: 1]
-  --help                     Show this message and exit.
+  -v, --verbose             Show verbose output or not
+  -u, --uart PATH           TTY serial device for UART, default to the 1st
+                            serial device connected to your board or an empty
+                            string
+  -i, --iterations INTEGER  Number of tests  [default: 1]
+  --help                    Show this message and exit.
 ```
