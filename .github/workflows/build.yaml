@@ -35,17 +35,14 @@ jobs:
             echo "::endgroup::"
           }
 
-          make_platform stm32f4discovery
-          make_platform nucleo-f767zi
-          make_platform nucleo-f207zg
+          export -f make_platform
+          tests --list-platforms | grep -v "mps2" | xargs -I {} bash -c 'make_platform "$@"' _ {}
 
     - name: Functional test
       id: func_test
       shell: nix develop .#ci -c bash -e {0}
       run: |
-          tests func -v mps2-an385
-          tests func -v mps2-an386
-          tests func -v mps2-an500
+          tests-qemu func
     - name: Speed test
       id: speed_test
       shell: nix develop .#ci -c bash -e {0}
@@ -53,9 +50,7 @@ jobs:
         success()
         || steps.func_test.conclusion == 'failure'
       run: |
-          tests speed -v mps2-an385
-          tests speed -v mps2-an386
-          tests speed -v mps2-an500
+          tests-qemu speed
     - name: Stack test
       id: stack_test
       shell: nix develop .#ci -c bash -e {0}
@@ -64,9 +59,7 @@ jobs:
         || steps.func_test.conclusion == 'failure'
         || steps.speed_test.conclusion == 'failure'
       run: |
-          tests stack -v mps2-an385
-          tests stack -v mps2-an386
-          tests stack -v mps2-an500
+          tests-qemu stack
     - name: Nistkat test
       shell: nix develop .#ci -c bash -e {0}
       if: |
@@ -75,6 +68,4 @@ jobs:
         || steps.speed_test.conclusion == 'failure'
         || steps.stack_test.conclusion == 'failure'
       run: |
-        tests nistkat -v mps2-an385
-        tests nistkat -v mps2-an386
-        tests nistkat -v mps2-an500
+          tests-qemu nistkat

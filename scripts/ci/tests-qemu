@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+
+set -o errexit
+set -o errtrace
+set -o nounset
+set -o pipefail
+
+_run()
+{
+  local test_type="$1"
+  local platform="$2"
+  echo "::group:: $test_type test for $platform"
+  tests "$test_type" "$platform" -v
+  echo "::endgroup::"
+}
+
+export -f _run
+
+func()
+{
+  tests --list-platforms | grep "mps2" | xargs -I {} bash -c '_run func "$@"' _ {}
+}
+
+speed()
+{
+  tests --list-platforms | grep "mps2" | xargs -I {} bash -c '_run speed "$@"' _ {}
+}
+
+stack()
+{
+  tests --list-platforms | grep "mps2" | xargs -I {} bash -c '_run stack "$@"' _ {}
+}
+
+nistkat()
+{
+  tests --list-platforms | grep "mps2" | xargs -I {} bash -c '_run nistkat "$@"' _ {}
+}
+
+declare -f -F "$1" && true >/dev/null
+
+if [[ $? == 1 ]]; then
+  echo "Function not exists" 1>&2
+  exit 2
+fi
+
+"$@"
