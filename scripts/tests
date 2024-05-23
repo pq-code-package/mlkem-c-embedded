@@ -387,8 +387,15 @@ def nistkat(platform, verbose, uart):
         pass
 
 
-@click.group()
-def cli():
+@click.group(invoke_without_command=True)
+@click.option(
+    "--list-platforms",
+    is_flag=True,
+    help="List the supported platforms",
+)
+def cli(list_platforms):
+    if list_platforms:
+        print(*[f"{p}" for p in PLATFORM], sep="\n")
     pass
 
 
