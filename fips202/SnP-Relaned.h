@@ -30,10 +30,10 @@ Please refer to SnP-documentation.h for more details.
             SnP_AddLanes(state, data, (length)/SnP_laneLengthInBytes); \
             if ((length)%SnP_laneLengthInBytes > 0) \
                 SnP_AddBytesInLane(state, \
-                    (length)/SnP_laneLengthInBytes, \
-                    (data)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
-                    0, \
-                    (length)%SnP_laneLengthInBytes); \
+                                   (length)/SnP_laneLengthInBytes, \
+                                   (data)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
+                                   0, \
+                                   (length)%SnP_laneLengthInBytes); \
         } \
         else { \
             unsigned int _sizeLeft = (length); \
@@ -59,10 +59,10 @@ Please refer to SnP-documentation.h for more details.
             SnP_OverwriteLanes(state, data, (length)/SnP_laneLengthInBytes); \
             if ((length)%SnP_laneLengthInBytes > 0) \
                 SnP_OverwriteBytesInLane(state, \
-                    (length)/SnP_laneLengthInBytes, \
-                    (data)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
-                    0, \
-                    (length)%SnP_laneLengthInBytes); \
+                                         (length)/SnP_laneLengthInBytes, \
+                                         (data)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
+                                         0, \
+                                         (length)%SnP_laneLengthInBytes); \
         } \
         else { \
             unsigned int _sizeLeft = (length); \
@@ -88,10 +88,10 @@ Please refer to SnP-documentation.h for more details.
             SnP_ExtractLanes(state, data, (length)/SnP_laneLengthInBytes); \
             if ((length)%SnP_laneLengthInBytes > 0) \
                 SnP_ExtractBytesInLane(state, \
-                    (length)/SnP_laneLengthInBytes, \
-                    (data)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
-                    0, \
-                    (length)%SnP_laneLengthInBytes); \
+                                       (length)/SnP_laneLengthInBytes, \
+                                       (data)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
+                                       0, \
+                                       (length)%SnP_laneLengthInBytes); \
         } \
         else { \
             unsigned int _sizeLeft = (length); \
@@ -117,11 +117,11 @@ Please refer to SnP-documentation.h for more details.
             SnP_ExtractAndAddLanes(state, input, output, (length)/SnP_laneLengthInBytes); \
             if ((length)%SnP_laneLengthInBytes > 0) \
                 SnP_ExtractAndAddBytesInLane(state, \
-                    (length)/SnP_laneLengthInBytes, \
-                    (input)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
-                    (output)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
-                    0, \
-                    (length)%SnP_laneLengthInBytes); \
+                                             (length)/SnP_laneLengthInBytes, \
+                                             (input)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
+                                             (output)+((length)/SnP_laneLengthInBytes)*SnP_laneLengthInBytes, \
+                                             0, \
+                                             (length)%SnP_laneLengthInBytes); \
         } \
         else { \
             unsigned int _sizeLeft = (length); \
