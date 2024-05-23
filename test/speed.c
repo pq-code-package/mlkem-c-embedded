@@ -72,8 +72,6 @@ int main(void) {
     printcycles("encaps cycles", cycles_enc[NTESTS >> 1]);
     printcycles("decaps cycles", cycles_dec[NTESTS >> 1]);
 
-
-
     for (i = 0; i < NTESTS; i++) {
         // NTT
         t0 = hal_get_time();
@@ -117,10 +115,7 @@ int main(void) {
     qsort(cycles, NTESTS, sizeof(uint64_t), cmp_uint64_t);
     printcycles("basemul_acc cycles", cycles[NTESTS >> 1]);
 
-
-
     hal_send_str("+");
-
 
     SERIAL_MARKER();
 
