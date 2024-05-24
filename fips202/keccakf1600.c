@@ -1,321 +1,951 @@
 // SPDX-License-Identifier: CC0-1.0
-/* Based on the CC0 implementation in https://github.com/mupq/mupq and
- * the public domain implementation in
- * crypto_hash/keccakc512/simple/ from http://bench.cr.yp.to/supercop.html
- * by Ronny Van Keer
- * and the public domain "TweetFips202" implementation
- * from https://twitter.com/tweetfips202
- * by Gilles Van Assche, Daniel J. Bernstein, and Peter Schwabe */
+/*
+The eXtended Keccak Code Package (XKCP)
+https://github.com/XKCP/XKCP
+
+The Keccak-p permutations, designed by Guido Bertoni, Joan Daemen, Michaël Peeters and Gilles Van Assche.
+
+Implementation by Ronny Van Keer, hereby denoted as "the implementer".
+
+For more information, feedback or questions, please refer to the Keccak Team website:
+https://keccak.team/
+
+To the extent possible under law, the implementer has waived all copyright
+and related or neighboring rights to the source code in this file.
+http://creativecommons.org/publicdomain/zero/1.0/
+
+---
+
+This file implements Keccak-p[1600] in a SnP-compatible way.
+Please refer to SnP-documentation.h for more details.
+
+This implementation comes with KeccakP-1600-SnP.h in the same folder.
+Please refer to LowLevel.build for the exact list of other files it must be combined with.
+*/
 
 #include <stdint.h>
-#include <assert.h>
+#include <string.h>
 #include "keccakf1600.h"
+#include "SnP-Relaned.h"
 
-#define NROUNDS 24
-#define ROL(a, offset) ((a << offset) ^ (a >> (64-offset)))
+#define IS_BIG_ENDIAN      4321
+#define IS_LITTLE_ENDIAN   1234
 
-static const uint64_t KeccakF_RoundConstants[NROUNDS] = {
-    (uint64_t)0x0000000000000001ULL,
-    (uint64_t)0x0000000000008082ULL,
-    (uint64_t)0x800000000000808aULL,
-    (uint64_t)0x8000000080008000ULL,
-    (uint64_t)0x000000000000808bULL,
-    (uint64_t)0x0000000080000001ULL,
-    (uint64_t)0x8000000080008081ULL,
-    (uint64_t)0x8000000000008009ULL,
-    (uint64_t)0x000000000000008aULL,
-    (uint64_t)0x0000000000000088ULL,
-    (uint64_t)0x0000000080008009ULL,
-    (uint64_t)0x000000008000000aULL,
-    (uint64_t)0x000000008000808bULL,
-    (uint64_t)0x800000000000008bULL,
-    (uint64_t)0x8000000000008089ULL,
-    (uint64_t)0x8000000000008003ULL,
-    (uint64_t)0x8000000000008002ULL,
-    (uint64_t)0x8000000000000080ULL,
-    (uint64_t)0x000000000000800aULL,
-    (uint64_t)0x800000008000000aULL,
-    (uint64_t)0x8000000080008081ULL,
-    (uint64_t)0x8000000000008080ULL,
-    (uint64_t)0x0000000080000001ULL,
-    (uint64_t)0x8000000080008008ULL
+#if defined(__arm__)
+# ifdef __BIG_ENDIAN
+#  define PLATFORM_BYTE_ORDER IS_BIG_ENDIAN
+# else
+#  define PLATFORM_BYTE_ORDER IS_LITTLE_ENDIAN
+# endif
+#else
+#error "endianness unknown"
+#endif
+
+#define ROL32(a, offset) ((((uint32_t)a) << (offset)) ^ (((uint32_t)a) >> (32-(offset))))
+
+/* Credit to Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
+#define prepareToBitInterleaving(low, high, temp, temp0, temp1) \
+    temp0 = (low); \
+    temp = (temp0 ^ (temp0 >>  1)) & 0x22222222UL;  temp0 = temp0 ^ temp ^ (temp <<  1); \
+    temp = (temp0 ^ (temp0 >>  2)) & 0x0C0C0C0CUL;  temp0 = temp0 ^ temp ^ (temp <<  2); \
+    temp = (temp0 ^ (temp0 >>  4)) & 0x00F000F0UL;  temp0 = temp0 ^ temp ^ (temp <<  4); \
+    temp = (temp0 ^ (temp0 >>  8)) & 0x0000FF00UL;  temp0 = temp0 ^ temp ^ (temp <<  8); \
+    temp1 = (high); \
+    temp = (temp1 ^ (temp1 >>  1)) & 0x22222222UL;  temp1 = temp1 ^ temp ^ (temp <<  1); \
+    temp = (temp1 ^ (temp1 >>  2)) & 0x0C0C0C0CUL;  temp1 = temp1 ^ temp ^ (temp <<  2); \
+    temp = (temp1 ^ (temp1 >>  4)) & 0x00F000F0UL;  temp1 = temp1 ^ temp ^ (temp <<  4); \
+    temp = (temp1 ^ (temp1 >>  8)) & 0x0000FF00UL;  temp1 = temp1 ^ temp ^ (temp <<  8);
+
+#define toBitInterleavingAndXOR(low, high, even, odd, temp, temp0, temp1) \
+    prepareToBitInterleaving(low, high, temp, temp0, temp1) \
+    even ^= (temp0 & 0x0000FFFF) | (temp1 << 16); \
+    odd ^= (temp0 >> 16) | (temp1 & 0xFFFF0000);
+
+#define toBitInterleavingAndAND(low, high, even, odd, temp, temp0, temp1) \
+    prepareToBitInterleaving(low, high, temp, temp0, temp1) \
+    even &= (temp0 & 0x0000FFFF) | (temp1 << 16); \
+    odd &= (temp0 >> 16) | (temp1 & 0xFFFF0000);
+
+#define toBitInterleavingAndSet(low, high, even, odd, temp, temp0, temp1) \
+    prepareToBitInterleaving(low, high, temp, temp0, temp1) \
+    even = (temp0 & 0x0000FFFF) | (temp1 << 16); \
+    odd = (temp0 >> 16) | (temp1 & 0xFFFF0000);
+
+/* Credit to Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
+#define prepareFromBitInterleaving(even, odd, temp, temp0, temp1) \
+    temp0 = (even); \
+    temp1 = (odd); \
+    temp = (temp0 & 0x0000FFFF) | (temp1 << 16); \
+    temp1 = (temp0 >> 16) | (temp1 & 0xFFFF0000); \
+    temp0 = temp; \
+    temp = (temp0 ^ (temp0 >>  8)) & 0x0000FF00UL;  temp0 = temp0 ^ temp ^ (temp <<  8); \
+    temp = (temp0 ^ (temp0 >>  4)) & 0x00F000F0UL;  temp0 = temp0 ^ temp ^ (temp <<  4); \
+    temp = (temp0 ^ (temp0 >>  2)) & 0x0C0C0C0CUL;  temp0 = temp0 ^ temp ^ (temp <<  2); \
+    temp = (temp0 ^ (temp0 >>  1)) & 0x22222222UL;  temp0 = temp0 ^ temp ^ (temp <<  1); \
+    temp = (temp1 ^ (temp1 >>  8)) & 0x0000FF00UL;  temp1 = temp1 ^ temp ^ (temp <<  8); \
+    temp = (temp1 ^ (temp1 >>  4)) & 0x00F000F0UL;  temp1 = temp1 ^ temp ^ (temp <<  4); \
+    temp = (temp1 ^ (temp1 >>  2)) & 0x0C0C0C0CUL;  temp1 = temp1 ^ temp ^ (temp <<  2); \
+    temp = (temp1 ^ (temp1 >>  1)) & 0x22222222UL;  temp1 = temp1 ^ temp ^ (temp <<  1);
+
+#define fromBitInterleaving(even, odd, low, high, temp, temp0, temp1) \
+    prepareFromBitInterleaving(even, odd, temp, temp0, temp1) \
+    low = temp0; \
+    high = temp1;
+
+typedef struct {
+    uint32_t A[50];
+} KeccakP1600_plain32_state;
+
+static void KeccakP1600_AddBytesInLane(KeccakP1600_plain32_state *state, unsigned int lanePosition, const unsigned char *data, unsigned int offset, unsigned int length) {
+    uint8_t laneAsBytes[8];
+    uint32_t low, high;
+    uint32_t temp, temp0, temp1;
+    uint32_t *stateAsHalfLanes = state->A;
+
+    memset(laneAsBytes, 0, 8);
+    memcpy(laneAsBytes + offset, data, length);
+    #if (PLATFORM_BYTE_ORDER == IS_LITTLE_ENDIAN)
+    low = *((uint32_t *)(laneAsBytes + 0));
+    high = *((uint32_t *)(laneAsBytes + 4));
+    #else
+    low = laneAsBytes[0]
+          | ((uint32_t)(laneAsBytes[1]) << 8)
+          | ((uint32_t)(laneAsBytes[2]) << 16)
+          | ((uint32_t)(laneAsBytes[3]) << 24);
+    high = laneAsBytes[4]
+           | ((uint32_t)(laneAsBytes[5]) << 8)
+           | ((uint32_t)(laneAsBytes[6]) << 16)
+           | ((uint32_t)(laneAsBytes[7]) << 24);
+    #endif
+    toBitInterleavingAndXOR(low, high, stateAsHalfLanes[lanePosition * 2 + 0], stateAsHalfLanes[lanePosition * 2 + 1], temp, temp0, temp1);
+}
+
+/* ---------------------------------------------------------------- */
+
+void KeccakP1600_AddLanes(KeccakP1600_plain32_state *state, const unsigned char *data, unsigned int laneCount) {
+    #if (PLATFORM_BYTE_ORDER == IS_LITTLE_ENDIAN)
+    const uint32_t *pI = (const uint32_t *)data;
+    uint32_t *pS = state->A;
+    uint32_t t, x0, x1;
+    int i;
+    for (i = laneCount - 1; i >= 0; --i) {
+        #ifdef NO_MISALIGNED_ACCESSES
+        uint32_t low;
+        uint32_t high;
+        memcpy(&low, pI++, 4);
+        memcpy(&high, pI++, 4);
+        toBitInterleavingAndXOR(low, high, *(pS++), *(pS++), t, x0, x1);
+        #else
+        toBitInterleavingAndXOR(*(pI++), *(pI++), *(pS++), *(pS++), t, x0, x1)
+        #endif
+    }
+    #else
+    unsigned int lanePosition;
+    for (lanePosition = 0; lanePosition < laneCount; lanePosition++) {
+        uint8_t laneAsBytes[8];
+        memcpy(laneAsBytes, data + lanePosition * 8, 8);
+        uint32_t low = laneAsBytes[0]
+                       | ((uint32_t)(laneAsBytes[1]) << 8)
+                       | ((uint32_t)(laneAsBytes[2]) << 16)
+                       | ((uint32_t)(laneAsBytes[3]) << 24);
+        uint32_t high = laneAsBytes[4]
+                        | ((uint32_t)(laneAsBytes[5]) << 8)
+                        | ((uint32_t)(laneAsBytes[6]) << 16)
+                        | ((uint32_t)(laneAsBytes[7]) << 24);
+        uint32_t even, odd, temp, temp0, temp1;
+        uint32_t *stateAsHalfLanes = state->A;
+        toBitInterleavingAndXOR(low, high, stateAsHalfLanes[lanePosition * 2 + 0], stateAsHalfLanes[lanePosition * 2 + 1], temp, temp0, temp1);
+    }
+    #endif
+}
+
+static void KeccakP1600_ExtractBytesInLane(const KeccakP1600_plain32_state *state, unsigned int lanePosition, unsigned char *data, unsigned int offset, unsigned int length) {
+    const uint32_t *stateAsHalfLanes = state->A;
+    uint32_t low, high, temp, temp0, temp1;
+    uint8_t laneAsBytes[8];
+
+    fromBitInterleaving(stateAsHalfLanes[lanePosition * 2], stateAsHalfLanes[lanePosition * 2 + 1], low, high, temp, temp0, temp1);
+    #if (PLATFORM_BYTE_ORDER == IS_LITTLE_ENDIAN)
+    *((uint32_t *)(laneAsBytes + 0)) = low;
+    *((uint32_t *)(laneAsBytes + 4)) = high;
+    #else
+    laneAsBytes[0] = low & 0xFF;
+    laneAsBytes[1] = (low >> 8) & 0xFF;
+    laneAsBytes[2] = (low >> 16) & 0xFF;
+    laneAsBytes[3] = (low >> 24) & 0xFF;
+    laneAsBytes[4] = high & 0xFF;
+    laneAsBytes[5] = (high >> 8) & 0xFF;
+    laneAsBytes[6] = (high >> 16) & 0xFF;
+    laneAsBytes[7] = (high >> 24) & 0xFF;
+    #endif
+    memcpy(data, laneAsBytes + offset, length);
+}
+
+/* ---------------------------------------------------------------- */
+
+static void KeccakP1600_ExtractLanes(const KeccakP1600_plain32_state *state, unsigned char *data, unsigned int laneCount) {
+    #if (PLATFORM_BYTE_ORDER == IS_LITTLE_ENDIAN)
+    uint32_t *pI = (uint32_t *)data;
+    const uint32_t *pS = ( const uint32_t *)state;
+    uint32_t t, x0, x1;
+    int i;
+    for (i = laneCount - 1; i >= 0; --i) {
+        #ifdef NO_MISALIGNED_ACCESSES
+        uint32_t low;
+        uint32_t high;
+        fromBitInterleaving(*(pS++), *(pS++), low, high, t, x0, x1);
+        memcpy(pI++, &low, 4);
+        memcpy(pI++, &high, 4);
+        #else
+        fromBitInterleaving(*(pS++), *(pS++), *(pI++), *(pI++), t, x0, x1)
+        #endif
+    }
+    #else
+    unsigned int lanePosition;
+    for (lanePosition = 0; lanePosition < laneCount; lanePosition++) {
+        uint32_t *stateAsHalfLanes = state->A;
+        uint32_t low, high, temp, temp0, temp1;
+        fromBitInterleaving(stateAsHalfLanes[lanePosition * 2], stateAsHalfLanes[lanePosition * 2 + 1], low, high, temp, temp0, temp1);
+        uint8_t laneAsBytes[8];
+        laneAsBytes[0] = low & 0xFF;
+        laneAsBytes[1] = (low >> 8) & 0xFF;
+        laneAsBytes[2] = (low >> 16) & 0xFF;
+        laneAsBytes[3] = (low >> 24) & 0xFF;
+        laneAsBytes[4] = high & 0xFF;
+        laneAsBytes[5] = (high >> 8) & 0xFF;
+        laneAsBytes[6] = (high >> 16) & 0xFF;
+        laneAsBytes[7] = (high >> 24) & 0xFF;
+        memcpy(data + lanePosition * 8, laneAsBytes, 8);
+    }
+    #endif
+}
+
+static const uint32_t KeccakF1600RoundConstants_int2[2 * 24 + 1] = {
+    0x00000001UL,    0x00000000UL,
+    0x00000000UL,    0x00000089UL,
+    0x00000000UL,    0x8000008bUL,
+    0x00000000UL,    0x80008080UL,
+    0x00000001UL,    0x0000008bUL,
+    0x00000001UL,    0x00008000UL,
+    0x00000001UL,    0x80008088UL,
+    0x00000001UL,    0x80000082UL,
+    0x00000000UL,    0x0000000bUL,
+    0x00000000UL,    0x0000000aUL,
+    0x00000001UL,    0x00008082UL,
+    0x00000000UL,    0x00008003UL,
+    0x00000001UL,    0x0000808bUL,
+    0x00000001UL,    0x8000000bUL,
+    0x00000001UL,    0x8000008aUL,
+    0x00000001UL,    0x80000081UL,
+    0x00000000UL,    0x80000081UL,
+    0x00000000UL,    0x80000008UL,
+    0x00000000UL,    0x00000083UL,
+    0x00000000UL,    0x80008003UL,
+    0x00000001UL,    0x80008088UL,
+    0x00000000UL,    0x80000088UL,
+    0x00000001UL,    0x00008000UL,
+    0x00000000UL,    0x80008082UL,
+    0x000000FFUL
 };
 
-void KeccakF1600_StateExtractBytes(uint64_t *state, unsigned char *data, unsigned int offset, unsigned int length) {
-    unsigned int i;
-    for (i = 0; i < length; i++) {
-        data[i] = state[(offset + i) >> 3] >> (8 * ((offset + i) & 0x07));
+#define KeccakRound0() \
+    Cx = Abu0^Agu0^Aku0^Amu0^Asu0; \
+    Du1 = Abe1^Age1^Ake1^Ame1^Ase1; \
+    Da0 = Cx^ROL32(Du1, 1); \
+    Cz = Abu1^Agu1^Aku1^Amu1^Asu1; \
+    Du0 = Abe0^Age0^Ake0^Ame0^Ase0; \
+    Da1 = Cz^Du0; \
+    Cw = Abi0^Agi0^Aki0^Ami0^Asi0; \
+    Do0 = Cw^ROL32(Cz, 1); \
+    Cy = Abi1^Agi1^Aki1^Ami1^Asi1; \
+    Do1 = Cy^Cx; \
+    Cx = Aba0^Aga0^Aka0^Ama0^Asa0; \
+    De0 = Cx^ROL32(Cy, 1); \
+    Cz = Aba1^Aga1^Aka1^Ama1^Asa1; \
+    De1 = Cz^Cw; \
+    Cy = Abo1^Ago1^Ako1^Amo1^Aso1; \
+    Di0 = Du0^ROL32(Cy, 1); \
+    Cw = Abo0^Ago0^Ako0^Amo0^Aso0; \
+    Di1 = Du1^Cw; \
+    Du0 = Cw^ROL32(Cz, 1); \
+    Du1 = Cy^Cx; \
+    \
+    Ba = (Aba0^Da0); \
+    Be = ROL32((Age0^De0), 22); \
+    Bi = ROL32((Aki1^Di1), 22); \
+    Bo = ROL32((Amo1^Do1), 11); \
+    Bu = ROL32((Asu0^Du0),  7); \
+    Aba0 =   Ba ^((~Be)&  Bi ); \
+    Aba0 ^= *(pRoundConstants++); \
+    Age0 =   Be ^((~Bi)&  Bo ); \
+    Aki1 =   Bi ^((~Bo)&  Bu ); \
+    Amo1 =   Bo ^((~Bu)&  Ba ); \
+    Asu0 =   Bu ^((~Ba)&  Be ); \
+    Ba = (Aba1^Da1); \
+    Be = ROL32((Age1^De1), 22); \
+    Bi = ROL32((Aki0^Di0), 21); \
+    Bo = ROL32((Amo0^Do0), 10); \
+    Bu = ROL32((Asu1^Du1),  7); \
+    Aba1 =   Ba ^((~Be)&  Bi ); \
+    Aba1 ^= *(pRoundConstants++); \
+    Age1 =   Be ^((~Bi)&  Bo ); \
+    Aki0 =   Bi ^((~Bo)&  Bu ); \
+    Amo0 =   Bo ^((~Bu)&  Ba ); \
+    Asu1 =   Bu ^((~Ba)&  Be ); \
+    Bi = ROL32((Aka1^Da1),  2); \
+    Bo = ROL32((Ame1^De1), 23); \
+    Bu = ROL32((Asi1^Di1), 31); \
+    Ba = ROL32((Abo0^Do0), 14); \
+    Be = ROL32((Agu0^Du0), 10); \
+    Aka1 =   Ba ^((~Be)&  Bi ); \
+    Ame1 =   Be ^((~Bi)&  Bo ); \
+    Asi1 =   Bi ^((~Bo)&  Bu ); \
+    Abo0 =   Bo ^((~Bu)&  Ba ); \
+    Agu0 =   Bu ^((~Ba)&  Be ); \
+    Bi = ROL32((Aka0^Da0),  1); \
+    Bo = ROL32((Ame0^De0), 22); \
+    Bu = ROL32((Asi0^Di0), 30); \
+    Ba = ROL32((Abo1^Do1), 14); \
+    Be = ROL32((Agu1^Du1), 10); \
+    Aka0 =   Ba ^((~Be)&  Bi ); \
+    Ame0 =   Be ^((~Bi)&  Bo ); \
+    Asi0 =   Bi ^((~Bo)&  Bu ); \
+    Abo1 =   Bo ^((~Bu)&  Ba ); \
+    Agu1 =   Bu ^((~Ba)&  Be ); \
+    Bu = ROL32((Asa0^Da0),  9); \
+    Ba = ROL32((Abe1^De1),  1); \
+    Be = ROL32((Agi0^Di0),  3); \
+    Bi = ROL32((Ako1^Do1), 13); \
+    Bo = ROL32((Amu0^Du0),  4); \
+    Asa0 =   Ba ^((~Be)&  Bi ); \
+    Abe1 =   Be ^((~Bi)&  Bo ); \
+    Agi0 =   Bi ^((~Bo)&  Bu ); \
+    Ako1 =   Bo ^((~Bu)&  Ba ); \
+    Amu0 =   Bu ^((~Ba)&  Be ); \
+    Bu = ROL32((Asa1^Da1),  9); \
+    Ba = (Abe0^De0); \
+    Be = ROL32((Agi1^Di1),  3); \
+    Bi = ROL32((Ako0^Do0), 12); \
+    Bo = ROL32((Amu1^Du1),  4); \
+    Asa1 =   Ba ^((~Be)&  Bi ); \
+    Abe0 =   Be ^((~Bi)&  Bo ); \
+    Agi1 =   Bi ^((~Bo)&  Bu ); \
+    Ako0 =   Bo ^((~Bu)&  Ba ); \
+    Amu1 =   Bu ^((~Ba)&  Be ); \
+    Be = ROL32((Aga0^Da0), 18); \
+    Bi = ROL32((Ake0^De0),  5); \
+    Bo = ROL32((Ami1^Di1),  8); \
+    Bu = ROL32((Aso0^Do0), 28); \
+    Ba = ROL32((Abu1^Du1), 14); \
+    Aga0 =   Ba ^((~Be)&  Bi ); \
+    Ake0 =   Be ^((~Bi)&  Bo ); \
+    Ami1 =   Bi ^((~Bo)&  Bu ); \
+    Aso0 =   Bo ^((~Bu)&  Ba ); \
+    Abu1 =   Bu ^((~Ba)&  Be ); \
+    Be = ROL32((Aga1^Da1), 18); \
+    Bi = ROL32((Ake1^De1),  5); \
+    Bo = ROL32((Ami0^Di0),  7); \
+    Bu = ROL32((Aso1^Do1), 28); \
+    Ba = ROL32((Abu0^Du0), 13); \
+    Aga1 =   Ba ^((~Be)&  Bi ); \
+    Ake1 =   Be ^((~Bi)&  Bo ); \
+    Ami0 =   Bi ^((~Bo)&  Bu ); \
+    Aso1 =   Bo ^((~Bu)&  Ba ); \
+    Abu0 =   Bu ^((~Ba)&  Be ); \
+    Bo = ROL32((Ama1^Da1), 21); \
+    Bu = ROL32((Ase0^De0),  1); \
+    Ba = ROL32((Abi0^Di0), 31); \
+    Be = ROL32((Ago1^Do1), 28); \
+    Bi = ROL32((Aku1^Du1), 20); \
+    Ama1 =   Ba ^((~Be)&  Bi ); \
+    Ase0 =   Be ^((~Bi)&  Bo ); \
+    Abi0 =   Bi ^((~Bo)&  Bu ); \
+    Ago1 =   Bo ^((~Bu)&  Ba ); \
+    Aku1 =   Bu ^((~Ba)&  Be ); \
+    Bo = ROL32((Ama0^Da0), 20); \
+    Bu = ROL32((Ase1^De1),  1); \
+    Ba = ROL32((Abi1^Di1), 31); \
+    Be = ROL32((Ago0^Do0), 27); \
+    Bi = ROL32((Aku0^Du0), 19); \
+    Ama0 =   Ba ^((~Be)&  Bi ); \
+    Ase1 =   Be ^((~Bi)&  Bo ); \
+    Abi1 =   Bi ^((~Bo)&  Bu ); \
+    Ago0 =   Bo ^((~Bu)&  Ba ); \
+    Aku0 =   Bu ^((~Ba)&  Be )
+
+#define KeccakRound1() \
+    Cx = Asu0^Agu0^Amu0^Abu1^Aku1; \
+    Du1 = Age1^Ame0^Abe0^Ake1^Ase1; \
+    Da0 = Cx^ROL32(Du1, 1); \
+    Cz = Asu1^Agu1^Amu1^Abu0^Aku0; \
+    Du0 = Age0^Ame1^Abe1^Ake0^Ase0; \
+    Da1 = Cz^Du0; \
+    Cw = Aki1^Asi1^Agi0^Ami1^Abi0; \
+    Do0 = Cw^ROL32(Cz, 1); \
+    Cy = Aki0^Asi0^Agi1^Ami0^Abi1; \
+    Do1 = Cy^Cx; \
+    Cx = Aba0^Aka1^Asa0^Aga0^Ama1; \
+    De0 = Cx^ROL32(Cy, 1); \
+    Cz = Aba1^Aka0^Asa1^Aga1^Ama0; \
+    De1 = Cz^Cw; \
+    Cy = Amo0^Abo1^Ako0^Aso1^Ago0; \
+    Di0 = Du0^ROL32(Cy, 1); \
+    Cw = Amo1^Abo0^Ako1^Aso0^Ago1; \
+    Di1 = Du1^Cw; \
+    Du0 = Cw^ROL32(Cz, 1); \
+    Du1 = Cy^Cx; \
+    \
+    Ba = (Aba0^Da0); \
+    Be = ROL32((Ame1^De0), 22); \
+    Bi = ROL32((Agi1^Di1), 22); \
+    Bo = ROL32((Aso1^Do1), 11); \
+    Bu = ROL32((Aku1^Du0),  7); \
+    Aba0 =   Ba ^((~Be)&  Bi ); \
+    Aba0 ^= *(pRoundConstants++); \
+    Ame1 =   Be ^((~Bi)&  Bo ); \
+    Agi1 =   Bi ^((~Bo)&  Bu ); \
+    Aso1 =   Bo ^((~Bu)&  Ba ); \
+    Aku1 =   Bu ^((~Ba)&  Be ); \
+    Ba = (Aba1^Da1); \
+    Be = ROL32((Ame0^De1), 22); \
+    Bi = ROL32((Agi0^Di0), 21); \
+    Bo = ROL32((Aso0^Do0), 10); \
+    Bu = ROL32((Aku0^Du1),  7); \
+    Aba1 =   Ba ^((~Be)&  Bi ); \
+    Aba1 ^= *(pRoundConstants++); \
+    Ame0 =   Be ^((~Bi)&  Bo ); \
+    Agi0 =   Bi ^((~Bo)&  Bu ); \
+    Aso0 =   Bo ^((~Bu)&  Ba ); \
+    Aku0 =   Bu ^((~Ba)&  Be ); \
+    Bi = ROL32((Asa1^Da1),  2); \
+    Bo = ROL32((Ake1^De1), 23); \
+    Bu = ROL32((Abi1^Di1), 31); \
+    Ba = ROL32((Amo1^Do0), 14); \
+    Be = ROL32((Agu0^Du0), 10); \
+    Asa1 =   Ba ^((~Be)&  Bi ); \
+    Ake1 =   Be ^((~Bi)&  Bo ); \
+    Abi1 =   Bi ^((~Bo)&  Bu ); \
+    Amo1 =   Bo ^((~Bu)&  Ba ); \
+    Agu0 =   Bu ^((~Ba)&  Be ); \
+    Bi = ROL32((Asa0^Da0),  1); \
+    Bo = ROL32((Ake0^De0), 22); \
+    Bu = ROL32((Abi0^Di0), 30); \
+    Ba = ROL32((Amo0^Do1), 14); \
+    Be = ROL32((Agu1^Du1), 10); \
+    Asa0 =   Ba ^((~Be)&  Bi ); \
+    Ake0 =   Be ^((~Bi)&  Bo ); \
+    Abi0 =   Bi ^((~Bo)&  Bu ); \
+    Amo0 =   Bo ^((~Bu)&  Ba ); \
+    Agu1 =   Bu ^((~Ba)&  Be ); \
+    Bu = ROL32((Ama1^Da0),  9); \
+    Ba = ROL32((Age1^De1),  1); \
+    Be = ROL32((Asi1^Di0),  3); \
+    Bi = ROL32((Ako0^Do1), 13); \
+    Bo = ROL32((Abu1^Du0),  4); \
+    Ama1 =   Ba ^((~Be)&  Bi ); \
+    Age1 =   Be ^((~Bi)&  Bo ); \
+    Asi1 =   Bi ^((~Bo)&  Bu ); \
+    Ako0 =   Bo ^((~Bu)&  Ba ); \
+    Abu1 =   Bu ^((~Ba)&  Be ); \
+    Bu = ROL32((Ama0^Da1),  9); \
+    Ba = (Age0^De0); \
+    Be = ROL32((Asi0^Di1),  3); \
+    Bi = ROL32((Ako1^Do0), 12); \
+    Bo = ROL32((Abu0^Du1),  4); \
+    Ama0 =   Ba ^((~Be)&  Bi ); \
+    Age0 =   Be ^((~Bi)&  Bo ); \
+    Asi0 =   Bi ^((~Bo)&  Bu ); \
+    Ako1 =   Bo ^((~Bu)&  Ba ); \
+    Abu0 =   Bu ^((~Ba)&  Be ); \
+    Be = ROL32((Aka1^Da0), 18); \
+    Bi = ROL32((Abe1^De0),  5); \
+    Bo = ROL32((Ami0^Di1),  8); \
+    Bu = ROL32((Ago1^Do0), 28); \
+    Ba = ROL32((Asu1^Du1), 14); \
+    Aka1 =   Ba ^((~Be)&  Bi ); \
+    Abe1 =   Be ^((~Bi)&  Bo ); \
+    Ami0 =   Bi ^((~Bo)&  Bu ); \
+    Ago1 =   Bo ^((~Bu)&  Ba ); \
+    Asu1 =   Bu ^((~Ba)&  Be ); \
+    Be = ROL32((Aka0^Da1), 18); \
+    Bi = ROL32((Abe0^De1),  5); \
+    Bo = ROL32((Ami1^Di0),  7); \
+    Bu = ROL32((Ago0^Do1), 28); \
+    Ba = ROL32((Asu0^Du0), 13); \
+    Aka0 =   Ba ^((~Be)&  Bi ); \
+    Abe0 =   Be ^((~Bi)&  Bo ); \
+    Ami1 =   Bi ^((~Bo)&  Bu ); \
+    Ago0 =   Bo ^((~Bu)&  Ba ); \
+    Asu0 =   Bu ^((~Ba)&  Be ); \
+    Bo = ROL32((Aga1^Da1), 21); \
+    Bu = ROL32((Ase0^De0),  1); \
+    Ba = ROL32((Aki1^Di0), 31); \
+    Be = ROL32((Abo1^Do1), 28); \
+    Bi = ROL32((Amu1^Du1), 20); \
+    Aga1 =   Ba ^((~Be)&  Bi ); \
+    Ase0 =   Be ^((~Bi)&  Bo ); \
+    Aki1 =   Bi ^((~Bo)&  Bu ); \
+    Abo1 =   Bo ^((~Bu)&  Ba ); \
+    Amu1 =   Bu ^((~Ba)&  Be ); \
+    Bo = ROL32((Aga0^Da0), 20); \
+    Bu = ROL32((Ase1^De1),  1); \
+    Ba = ROL32((Aki0^Di1), 31); \
+    Be = ROL32((Abo0^Do0), 27); \
+    Bi = ROL32((Amu0^Du0), 19); \
+    Aga0 =   Ba ^((~Be)&  Bi ); \
+    Ase1 =   Be ^((~Bi)&  Bo ); \
+    Aki0 =   Bi ^((~Bo)&  Bu ); \
+    Abo0 =   Bo ^((~Bu)&  Ba ); \
+    Amu0 =   Bu ^((~Ba)&  Be );
+
+#define KeccakRound2() \
+    Cx = Aku1^Agu0^Abu1^Asu1^Amu1; \
+    Du1 = Ame0^Ake0^Age0^Abe0^Ase1; \
+    Da0 = Cx^ROL32(Du1, 1); \
+    Cz = Aku0^Agu1^Abu0^Asu0^Amu0; \
+    Du0 = Ame1^Ake1^Age1^Abe1^Ase0; \
+    Da1 = Cz^Du0; \
+    Cw = Agi1^Abi1^Asi1^Ami0^Aki1; \
+    Do0 = Cw^ROL32(Cz, 1); \
+    Cy = Agi0^Abi0^Asi0^Ami1^Aki0; \
+    Do1 = Cy^Cx; \
+    Cx = Aba0^Asa1^Ama1^Aka1^Aga1; \
+    De0 = Cx^ROL32(Cy, 1); \
+    Cz = Aba1^Asa0^Ama0^Aka0^Aga0; \
+    De1 = Cz^Cw; \
+    Cy = Aso0^Amo0^Ako1^Ago0^Abo0; \
+    Di0 = Du0^ROL32(Cy, 1); \
+    Cw = Aso1^Amo1^Ako0^Ago1^Abo1; \
+    Di1 = Du1^Cw; \
+    Du0 = Cw^ROL32(Cz, 1); \
+    Du1 = Cy^Cx; \
+    \
+    Ba = (Aba0^Da0); \
+    Be = ROL32((Ake1^De0), 22); \
+    Bi = ROL32((Asi0^Di1), 22); \
+    Bo = ROL32((Ago0^Do1), 11); \
+    Bu = ROL32((Amu1^Du0),  7); \
+    Aba0 =   Ba ^((~Be)&  Bi ); \
+    Aba0 ^= *(pRoundConstants++); \
+    Ake1 =   Be ^((~Bi)&  Bo ); \
+    Asi0 =   Bi ^((~Bo)&  Bu ); \
+    Ago0 =   Bo ^((~Bu)&  Ba ); \
+    Amu1 =   Bu ^((~Ba)&  Be ); \
+    Ba = (Aba1^Da1); \
+    Be = ROL32((Ake0^De1), 22); \
+    Bi = ROL32((Asi1^Di0), 21); \
+    Bo = ROL32((Ago1^Do0), 10); \
+    Bu = ROL32((Amu0^Du1),  7); \
+    Aba1 =   Ba ^((~Be)&  Bi ); \
+    Aba1 ^= *(pRoundConstants++); \
+    Ake0 =   Be ^((~Bi)&  Bo ); \
+    Asi1 =   Bi ^((~Bo)&  Bu ); \
+    Ago1 =   Bo ^((~Bu)&  Ba ); \
+    Amu0 =   Bu ^((~Ba)&  Be ); \
+    Bi = ROL32((Ama0^Da1),  2); \
+    Bo = ROL32((Abe0^De1), 23); \
+    Bu = ROL32((Aki0^Di1), 31); \
+    Ba = ROL32((Aso1^Do0), 14); \
+    Be = ROL32((Agu0^Du0), 10); \
+    Ama0 =   Ba ^((~Be)&  Bi ); \
+    Abe0 =   Be ^((~Bi)&  Bo ); \
+    Aki0 =   Bi ^((~Bo)&  Bu ); \
+    Aso1 =   Bo ^((~Bu)&  Ba ); \
+    Agu0 =   Bu ^((~Ba)&  Be ); \
+    Bi = ROL32((Ama1^Da0),  1); \
+    Bo = ROL32((Abe1^De0), 22); \
+    Bu = ROL32((Aki1^Di0), 30); \
+    Ba = ROL32((Aso0^Do1), 14); \
+    Be = ROL32((Agu1^Du1), 10); \
+    Ama1 =   Ba ^((~Be)&  Bi ); \
+    Abe1 =   Be ^((~Bi)&  Bo ); \
+    Aki1 =   Bi ^((~Bo)&  Bu ); \
+    Aso0 =   Bo ^((~Bu)&  Ba ); \
+    Agu1 =   Bu ^((~Ba)&  Be ); \
+    Bu = ROL32((Aga1^Da0),  9); \
+    Ba = ROL32((Ame0^De1),  1); \
+    Be = ROL32((Abi1^Di0),  3); \
+    Bi = ROL32((Ako1^Do1), 13); \
+    Bo = ROL32((Asu1^Du0),  4); \
+    Aga1 =   Ba ^((~Be)&  Bi ); \
+    Ame0 =   Be ^((~Bi)&  Bo ); \
+    Abi1 =   Bi ^((~Bo)&  Bu ); \
+    Ako1 =   Bo ^((~Bu)&  Ba ); \
+    Asu1 =   Bu ^((~Ba)&  Be ); \
+    Bu = ROL32((Aga0^Da1),  9); \
+    Ba = (Ame1^De0); \
+    Be = ROL32((Abi0^Di1),  3); \
+    Bi = ROL32((Ako0^Do0), 12); \
+    Bo = ROL32((Asu0^Du1),  4); \
+    Aga0 =   Ba ^((~Be)&  Bi ); \
+    Ame1 =   Be ^((~Bi)&  Bo ); \
+    Abi0 =   Bi ^((~Bo)&  Bu ); \
+    Ako0 =   Bo ^((~Bu)&  Ba ); \
+    Asu0 =   Bu ^((~Ba)&  Be ); \
+    Be = ROL32((Asa1^Da0), 18); \
+    Bi = ROL32((Age1^De0),  5); \
+    Bo = ROL32((Ami1^Di1),  8); \
+    Bu = ROL32((Abo1^Do0), 28); \
+    Ba = ROL32((Aku0^Du1), 14); \
+    Asa1 =   Ba ^((~Be)&  Bi ); \
+    Age1 =   Be ^((~Bi)&  Bo ); \
+    Ami1 =   Bi ^((~Bo)&  Bu ); \
+    Abo1 =   Bo ^((~Bu)&  Ba ); \
+    Aku0 =   Bu ^((~Ba)&  Be ); \
+    Be = ROL32((Asa0^Da1), 18); \
+    Bi = ROL32((Age0^De1),  5); \
+    Bo = ROL32((Ami0^Di0),  7); \
+    Bu = ROL32((Abo0^Do1), 28); \
+    Ba = ROL32((Aku1^Du0), 13); \
+    Asa0 =   Ba ^((~Be)&  Bi ); \
+    Age0 =   Be ^((~Bi)&  Bo ); \
+    Ami0 =   Bi ^((~Bo)&  Bu ); \
+    Abo0 =   Bo ^((~Bu)&  Ba ); \
+    Aku1 =   Bu ^((~Ba)&  Be ); \
+    Bo = ROL32((Aka0^Da1), 21); \
+    Bu = ROL32((Ase0^De0),  1); \
+    Ba = ROL32((Agi1^Di0), 31); \
+    Be = ROL32((Amo0^Do1), 28); \
+    Bi = ROL32((Abu0^Du1), 20); \
+    Aka0 =   Ba ^((~Be)&  Bi ); \
+    Ase0 =   Be ^((~Bi)&  Bo ); \
+    Agi1 =   Bi ^((~Bo)&  Bu ); \
+    Amo0 =   Bo ^((~Bu)&  Ba ); \
+    Abu0 =   Bu ^((~Ba)&  Be ); \
+    Bo = ROL32((Aka1^Da0), 20); \
+    Bu = ROL32((Ase1^De1),  1); \
+    Ba = ROL32((Agi0^Di1), 31); \
+    Be = ROL32((Amo1^Do0), 27); \
+    Bi = ROL32((Abu1^Du0), 19); \
+    Aka1 =   Ba ^((~Be)&  Bi ); \
+    Ase1 =   Be ^((~Bi)&  Bo ); \
+    Agi0 =   Bi ^((~Bo)&  Bu ); \
+    Amo1 =   Bo ^((~Bu)&  Ba ); \
+    Abu1 =   Bu ^((~Ba)&  Be );
+
+#define KeccakRound3() \
+    Cx = Amu1^Agu0^Asu1^Aku0^Abu0; \
+    Du1 = Ake0^Abe1^Ame1^Age0^Ase1; \
+    Da0 = Cx^ROL32(Du1, 1); \
+    Cz = Amu0^Agu1^Asu0^Aku1^Abu1; \
+    Du0 = Ake1^Abe0^Ame0^Age1^Ase0; \
+    Da1 = Cz^Du0; \
+    Cw = Asi0^Aki0^Abi1^Ami1^Agi1; \
+    Do0 = Cw^ROL32(Cz, 1); \
+    Cy = Asi1^Aki1^Abi0^Ami0^Agi0; \
+    Do1 = Cy^Cx; \
+    Cx = Aba0^Ama0^Aga1^Asa1^Aka0; \
+    De0 = Cx^ROL32(Cy, 1); \
+    Cz = Aba1^Ama1^Aga0^Asa0^Aka1; \
+    De1 = Cz^Cw; \
+    Cy = Ago1^Aso0^Ako0^Abo0^Amo1; \
+    Di0 = Du0^ROL32(Cy, 1); \
+    Cw = Ago0^Aso1^Ako1^Abo1^Amo0; \
+    Di1 = Du1^Cw; \
+    Du0 = Cw^ROL32(Cz, 1); \
+    Du1 = Cy^Cx; \
+    \
+    Ba = (Aba0^Da0); \
+    Be = ROL32((Abe0^De0), 22); \
+    Bi = ROL32((Abi0^Di1), 22); \
+    Bo = ROL32((Abo0^Do1), 11); \
+    Bu = ROL32((Abu0^Du0),  7); \
+    Aba0 =   Ba ^((~Be)&  Bi ); \
+    Aba0 ^= *(pRoundConstants++); \
+    Abe0 =   Be ^((~Bi)&  Bo ); \
+    Abi0 =   Bi ^((~Bo)&  Bu ); \
+    Abo0 =   Bo ^((~Bu)&  Ba ); \
+    Abu0 =   Bu ^((~Ba)&  Be ); \
+    Ba = (Aba1^Da1); \
+    Be = ROL32((Abe1^De1), 22); \
+    Bi = ROL32((Abi1^Di0), 21); \
+    Bo = ROL32((Abo1^Do0), 10); \
+    Bu = ROL32((Abu1^Du1),  7); \
+    Aba1 =   Ba ^((~Be)&  Bi ); \
+    Aba1 ^= *(pRoundConstants++); \
+    Abe1 =   Be ^((~Bi)&  Bo ); \
+    Abi1 =   Bi ^((~Bo)&  Bu ); \
+    Abo1 =   Bo ^((~Bu)&  Ba ); \
+    Abu1 =   Bu ^((~Ba)&  Be ); \
+    Bi = ROL32((Aga0^Da1),  2); \
+    Bo = ROL32((Age0^De1), 23); \
+    Bu = ROL32((Agi0^Di1), 31); \
+    Ba = ROL32((Ago0^Do0), 14); \
+    Be = ROL32((Agu0^Du0), 10); \
+    Aga0 =   Ba ^((~Be)&  Bi ); \
+    Age0 =   Be ^((~Bi)&  Bo ); \
+    Agi0 =   Bi ^((~Bo)&  Bu ); \
+    Ago0 =   Bo ^((~Bu)&  Ba ); \
+    Agu0 =   Bu ^((~Ba)&  Be ); \
+    Bi = ROL32((Aga1^Da0),  1); \
+    Bo = ROL32((Age1^De0), 22); \
+    Bu = ROL32((Agi1^Di0), 30); \
+    Ba = ROL32((Ago1^Do1), 14); \
+    Be = ROL32((Agu1^Du1), 10); \
+    Aga1 =   Ba ^((~Be)&  Bi ); \
+    Age1 =   Be ^((~Bi)&  Bo ); \
+    Agi1 =   Bi ^((~Bo)&  Bu ); \
+    Ago1 =   Bo ^((~Bu)&  Ba ); \
+    Agu1 =   Bu ^((~Ba)&  Be ); \
+    Bu = ROL32((Aka0^Da0),  9); \
+    Ba = ROL32((Ake0^De1),  1); \
+    Be = ROL32((Aki0^Di0),  3); \
+    Bi = ROL32((Ako0^Do1), 13); \
+    Bo = ROL32((Aku0^Du0),  4); \
+    Aka0 =   Ba ^((~Be)&  Bi ); \
+    Ake0 =   Be ^((~Bi)&  Bo ); \
+    Aki0 =   Bi ^((~Bo)&  Bu ); \
+    Ako0 =   Bo ^((~Bu)&  Ba ); \
+    Aku0 =   Bu ^((~Ba)&  Be ); \
+    Bu = ROL32((Aka1^Da1),  9); \
+    Ba = (Ake1^De0); \
+    Be = ROL32((Aki1^Di1),  3); \
+    Bi = ROL32((Ako1^Do0), 12); \
+    Bo = ROL32((Aku1^Du1),  4); \
+    Aka1 =   Ba ^((~Be)&  Bi ); \
+    Ake1 =   Be ^((~Bi)&  Bo ); \
+    Aki1 =   Bi ^((~Bo)&  Bu ); \
+    Ako1 =   Bo ^((~Bu)&  Ba ); \
+    Aku1 =   Bu ^((~Ba)&  Be ); \
+    Be = ROL32((Ama0^Da0), 18); \
+    Bi = ROL32((Ame0^De0),  5); \
+    Bo = ROL32((Ami0^Di1),  8); \
+    Bu = ROL32((Amo0^Do0), 28); \
+    Ba = ROL32((Amu0^Du1), 14); \
+    Ama0 =   Ba ^((~Be)&  Bi ); \
+    Ame0 =   Be ^((~Bi)&  Bo ); \
+    Ami0 =   Bi ^((~Bo)&  Bu ); \
+    Amo0 =   Bo ^((~Bu)&  Ba ); \
+    Amu0 =   Bu ^((~Ba)&  Be ); \
+    Be = ROL32((Ama1^Da1), 18); \
+    Bi = ROL32((Ame1^De1),  5); \
+    Bo = ROL32((Ami1^Di0),  7); \
+    Bu = ROL32((Amo1^Do1), 28); \
+    Ba = ROL32((Amu1^Du0), 13); \
+    Ama1 =   Ba ^((~Be)&  Bi ); \
+    Ame1 =   Be ^((~Bi)&  Bo ); \
+    Ami1 =   Bi ^((~Bo)&  Bu ); \
+    Amo1 =   Bo ^((~Bu)&  Ba ); \
+    Amu1 =   Bu ^((~Ba)&  Be ); \
+    Bo = ROL32((Asa0^Da1), 21); \
+    Bu = ROL32((Ase0^De0),  1); \
+    Ba = ROL32((Asi0^Di0), 31); \
+    Be = ROL32((Aso0^Do1), 28); \
+    Bi = ROL32((Asu0^Du1), 20); \
+    Asa0 =   Ba ^((~Be)&  Bi ); \
+    Ase0 =   Be ^((~Bi)&  Bo ); \
+    Asi0 =   Bi ^((~Bo)&  Bu ); \
+    Aso0 =   Bo ^((~Bu)&  Ba ); \
+    Asu0 =   Bu ^((~Ba)&  Be ); \
+    Bo = ROL32((Asa1^Da0), 20); \
+    Bu = ROL32((Ase1^De1),  1); \
+    Ba = ROL32((Asi1^Di1), 31); \
+    Be = ROL32((Aso1^Do0), 27); \
+    Bi = ROL32((Asu1^Du0), 19); \
+    Asa1 =   Ba ^((~Be)&  Bi ); \
+    Ase1 =   Be ^((~Bi)&  Bo ); \
+    Asi1 =   Bi ^((~Bo)&  Bu ); \
+    Aso1 =   Bo ^((~Bu)&  Ba ); \
+    Asu1 =   Bu ^((~Ba)&  Be );
+
+static void KeccakP1600_Permute_Nrounds(KeccakP1600_plain32_state *state, unsigned int nRounds) {
+    uint32_t Da0, De0, Di0, Do0, Du0;
+    uint32_t Da1, De1, Di1, Do1, Du1;
+    uint32_t Ba, Be, Bi, Bo, Bu;
+    uint32_t Cx, Cy, Cz, Cw;
+    const uint32_t *pRoundConstants = KeccakF1600RoundConstants_int2 + (24 - nRounds) * 2;
+    uint32_t *stateAsHalfLanes = state->A;
+#define Aba0 stateAsHalfLanes[ 0]
+#define Aba1 stateAsHalfLanes[ 1]
+#define Abe0 stateAsHalfLanes[ 2]
+#define Abe1 stateAsHalfLanes[ 3]
+#define Abi0 stateAsHalfLanes[ 4]
+#define Abi1 stateAsHalfLanes[ 5]
+#define Abo0 stateAsHalfLanes[ 6]
+#define Abo1 stateAsHalfLanes[ 7]
+#define Abu0 stateAsHalfLanes[ 8]
+#define Abu1 stateAsHalfLanes[ 9]
+#define Aga0 stateAsHalfLanes[10]
+#define Aga1 stateAsHalfLanes[11]
+#define Age0 stateAsHalfLanes[12]
+#define Age1 stateAsHalfLanes[13]
+#define Agi0 stateAsHalfLanes[14]
+#define Agi1 stateAsHalfLanes[15]
+#define Ago0 stateAsHalfLanes[16]
+#define Ago1 stateAsHalfLanes[17]
+#define Agu0 stateAsHalfLanes[18]
+#define Agu1 stateAsHalfLanes[19]
+#define Aka0 stateAsHalfLanes[20]
+#define Aka1 stateAsHalfLanes[21]
+#define Ake0 stateAsHalfLanes[22]
+#define Ake1 stateAsHalfLanes[23]
+#define Aki0 stateAsHalfLanes[24]
+#define Aki1 stateAsHalfLanes[25]
+#define Ako0 stateAsHalfLanes[26]
+#define Ako1 stateAsHalfLanes[27]
+#define Aku0 stateAsHalfLanes[28]
+#define Aku1 stateAsHalfLanes[29]
+#define Ama0 stateAsHalfLanes[30]
+#define Ama1 stateAsHalfLanes[31]
+#define Ame0 stateAsHalfLanes[32]
+#define Ame1 stateAsHalfLanes[33]
+#define Ami0 stateAsHalfLanes[34]
+#define Ami1 stateAsHalfLanes[35]
+#define Amo0 stateAsHalfLanes[36]
+#define Amo1 stateAsHalfLanes[37]
+#define Amu0 stateAsHalfLanes[38]
+#define Amu1 stateAsHalfLanes[39]
+#define Asa0 stateAsHalfLanes[40]
+#define Asa1 stateAsHalfLanes[41]
+#define Ase0 stateAsHalfLanes[42]
+#define Ase1 stateAsHalfLanes[43]
+#define Asi0 stateAsHalfLanes[44]
+#define Asi1 stateAsHalfLanes[45]
+#define Aso0 stateAsHalfLanes[46]
+#define Aso1 stateAsHalfLanes[47]
+#define Asu0 stateAsHalfLanes[48]
+#define Asu1 stateAsHalfLanes[49]
+
+    nRounds &= 3;
+    switch ( nRounds ) {
+#define I0 Ba
+#define I1 Be
+#define T0 Bi
+#define T1 Bo
+#define SwapPI13( in0,in1,in2,in3,eo0,eo1,eo2,eo3 ) \
+    I0 = (in0)[0]; I1 = (in0)[1];       \
+    T0 = (in1)[0]; T1 = (in1)[1];       \
+    (in0)[eo0] = T0; (in0)[eo0^1] = T1; \
+    T0 = (in2)[0]; T1 = (in2)[1];       \
+    (in1)[eo1] = T0; (in1)[eo1^1] = T1; \
+    T0 = (in3)[0]; T1 = (in3)[1];       \
+    (in2)[eo2] = T0; (in2)[eo2^1] = T1; \
+    (in3)[eo3] = I0; (in3)[eo3^1] = I1
+#define SwapPI2( in0,in1,in2,in3 ) \
+    I0 = (in0)[0]; I1 = (in0)[1]; \
+    T0 = (in1)[0]; T1 = (in1)[1]; \
+    (in0)[1] = T0; (in0)[0] = T1; \
+    (in1)[1] = I0; (in1)[0] = I1; \
+    I0 = (in2)[0]; I1 = (in2)[1]; \
+    T0 = (in3)[0]; T1 = (in3)[1]; \
+    (in2)[1] = T0; (in2)[0] = T1; \
+    (in3)[1] = I0; (in3)[0] = I1
+#define SwapEO( even,odd ) T0 = even; even = odd; odd = T0
+
+    case 1:
+        SwapPI13( &Aga0, &Aka0, &Asa0, &Ama0, 1, 0, 1, 0 );
+        SwapPI13( &Abe0, &Age0, &Ame0, &Ake0, 0, 1, 0, 1 );
+        SwapPI13( &Abi0, &Aki0, &Agi0, &Asi0, 1, 0, 1, 0 );
+        SwapEO( Ami0, Ami1 );
+        SwapPI13( &Abo0, &Amo0, &Aso0, &Ago0, 1, 0, 1, 0 );
+        SwapEO( Ako0, Ako1 );
+        SwapPI13( &Abu0, &Asu0, &Aku0, &Amu0, 0, 1, 0, 1 );
+        break;
+
+    case 2:
+        SwapPI2( &Aga0, &Asa0, &Aka0, &Ama0 );
+        SwapPI2( &Abe0, &Ame0, &Age0, &Ake0 );
+        SwapPI2( &Abi0, &Agi0, &Aki0, &Asi0 );
+        SwapPI2( &Abo0, &Aso0, &Ago0, &Amo0 );
+        SwapPI2( &Abu0, &Aku0, &Amu0, &Asu0 );
+        break;
+
+    case 3:
+        SwapPI13( &Aga0, &Ama0, &Asa0, &Aka0, 0, 1, 0, 1 );
+        SwapPI13( &Abe0, &Ake0, &Ame0, &Age0, 1, 0, 1, 0 );
+        SwapPI13( &Abi0, &Asi0, &Agi0, &Aki0, 0, 1, 0, 1 );
+        SwapEO( Ami0, Ami1 );
+        SwapPI13( &Abo0, &Ago0, &Aso0, &Amo0, 0, 1, 0, 1 );
+        SwapEO( Ako0, Ako1 );
+        SwapPI13( &Abu0, &Amu0, &Aku0, &Asu0, 1, 0, 1, 0 );
+        break;
+#undef I0
+#undef I1
+#undef T0
+#undef T1
+#undef SwapPI13
+#undef SwapPI2
+#undef SwapEO
     }
+
+    do {
+        /* Code for 4 rounds, using factor 2 interleaving, 64-bit lanes mapped to 32-bit words */
+        switch ( nRounds ) {
+        case 0:
+            KeccakRound0(); /* fall through */
+            [[fallthrough]];
+        case 3:
+            KeccakRound1();
+            [[fallthrough]];
+        case 2:
+            KeccakRound2();
+            [[fallthrough]];
+        case 1:
+            KeccakRound3();
+        }
+        nRounds = 0;
+    } while ( *pRoundConstants != 0xFF );
+
+#undef Aba0
+#undef Aba1
+#undef Abe0
+#undef Abe1
+#undef Abi0
+#undef Abi1
+#undef Abo0
+#undef Abo1
+#undef Abu0
+#undef Abu1
+#undef Aga0
+#undef Aga1
+#undef Age0
+#undef Age1
+#undef Agi0
+#undef Agi1
+#undef Ago0
+#undef Ago1
+#undef Agu0
+#undef Agu1
+#undef Aka0
+#undef Aka1
+#undef Ake0
+#undef Ake1
+#undef Aki0
+#undef Aki1
+#undef Ako0
+#undef Ako1
+#undef Aku0
+#undef Aku1
+#undef Ama0
+#undef Ama1
+#undef Ame0
+#undef Ame1
+#undef Ami0
+#undef Ami1
+#undef Amo0
+#undef Amo1
+#undef Amu0
+#undef Amu1
+#undef Asa0
+#undef Asa1
+#undef Ase0
+#undef Ase1
+#undef Asi0
+#undef Asi1
+#undef Aso0
+#undef Aso1
+#undef Asu0
+#undef Asu1
+}
+
+void KeccakF1600_StateExtractBytes(uint64_t *state, unsigned char *data, unsigned int offset, unsigned int length) {
+    SnP_ExtractBytes((KeccakP1600_plain32_state *)state, data, offset, length, KeccakP1600_ExtractLanes, KeccakP1600_ExtractBytesInLane, 8);
 }
 
 void KeccakF1600_StateXORBytes(uint64_t *state, const unsigned char *data, unsigned int offset, unsigned int length) {
-    unsigned int i;
-    for (i = 0; i < length; i++) {
-        state[(offset + i) >> 3] ^= (uint64_t)data[i] << (8 * ((offset + i) & 0x07));
-    }
+    SnP_AddBytes((KeccakP1600_plain32_state *)state, data, offset, length, KeccakP1600_AddLanes, KeccakP1600_AddBytesInLane, 8);
 }
 
 void KeccakF1600_StatePermute(uint64_t *state) {
-    int round;
-
-    uint64_t Aba, Abe, Abi, Abo, Abu;
-    uint64_t Aga, Age, Agi, Ago, Agu;
-    uint64_t Aka, Ake, Aki, Ako, Aku;
-    uint64_t Ama, Ame, Ami, Amo, Amu;
-    uint64_t Asa, Ase, Asi, Aso, Asu;
-    uint64_t BCa, BCe, BCi, BCo, BCu;
-    uint64_t Da, De, Di, Do, Du;
-    uint64_t Eba, Ebe, Ebi, Ebo, Ebu;
-    uint64_t Ega, Ege, Egi, Ego, Egu;
-    uint64_t Eka, Eke, Eki, Eko, Eku;
-    uint64_t Ema, Eme, Emi, Emo, Emu;
-    uint64_t Esa, Ese, Esi, Eso, Esu;
-
-    //copyFromState(A, state)
-    Aba = state[ 0];
-    Abe = state[ 1];
-    Abi = state[ 2];
-    Abo = state[ 3];
-    Abu = state[ 4];
-    Aga = state[ 5];
-    Age = state[ 6];
-    Agi = state[ 7];
-    Ago = state[ 8];
-    Agu = state[ 9];
-    Aka = state[10];
-    Ake = state[11];
-    Aki = state[12];
-    Ako = state[13];
-    Aku = state[14];
-    Ama = state[15];
-    Ame = state[16];
-    Ami = state[17];
-    Amo = state[18];
-    Amu = state[19];
-    Asa = state[20];
-    Ase = state[21];
-    Asi = state[22];
-    Aso = state[23];
-    Asu = state[24];
-
-    for ( round = 0; round < NROUNDS; round += 2 ) {
-        //    prepareTheta
-        BCa = Aba ^ Aga ^ Aka ^ Ama ^ Asa;
-        BCe = Abe ^ Age ^ Ake ^ Ame ^ Ase;
-        BCi = Abi ^ Agi ^ Aki ^ Ami ^ Asi;
-        BCo = Abo ^ Ago ^ Ako ^ Amo ^ Aso;
-        BCu = Abu ^ Agu ^ Aku ^ Amu ^ Asu;
-
-        //thetaRhoPiChiIotaPrepareTheta(round  , A, E)
-        Da = BCu ^ ROL(BCe, 1);
-        De = BCa ^ ROL(BCi, 1);
-        Di = BCe ^ ROL(BCo, 1);
-        Do = BCi ^ ROL(BCu, 1);
-        Du = BCo ^ ROL(BCa, 1);
-
-        Aba ^= Da;
-        BCa = Aba;
-        Age ^= De;
-        BCe = ROL(Age, 44);
-        Aki ^= Di;
-        BCi = ROL(Aki, 43);
-        Amo ^= Do;
-        BCo = ROL(Amo, 21);
-        Asu ^= Du;
-        BCu = ROL(Asu, 14);
-        Eba =   BCa ^ ((~BCe)&  BCi );
-        Eba ^= (uint64_t)KeccakF_RoundConstants[round];
-        Ebe =   BCe ^ ((~BCi)&  BCo );
-        Ebi =   BCi ^ ((~BCo)&  BCu );
-        Ebo =   BCo ^ ((~BCu)&  BCa );
-        Ebu =   BCu ^ ((~BCa)&  BCe );
-
-        Abo ^= Do;
-        BCa = ROL(Abo, 28);
-        Agu ^= Du;
-        BCe = ROL(Agu, 20);
-        Aka ^= Da;
-        BCi = ROL(Aka,  3);
-        Ame ^= De;
-        BCo = ROL(Ame, 45);
-        Asi ^= Di;
-        BCu = ROL(Asi, 61);
-        Ega =   BCa ^ ((~BCe)&  BCi );
-        Ege =   BCe ^ ((~BCi)&  BCo );
-        Egi =   BCi ^ ((~BCo)&  BCu );
-        Ego =   BCo ^ ((~BCu)&  BCa );
-        Egu =   BCu ^ ((~BCa)&  BCe );
-
-        Abe ^= De;
-        BCa = ROL(Abe,  1);
-        Agi ^= Di;
-        BCe = ROL(Agi,  6);
-        Ako ^= Do;
-        BCi = ROL(Ako, 25);
-        Amu ^= Du;
-        BCo = ROL(Amu,  8);
-        Asa ^= Da;
-        BCu = ROL(Asa, 18);
-        Eka =   BCa ^ ((~BCe)&  BCi );
-        Eke =   BCe ^ ((~BCi)&  BCo );
-        Eki =   BCi ^ ((~BCo)&  BCu );
-        Eko =   BCo ^ ((~BCu)&  BCa );
-        Eku =   BCu ^ ((~BCa)&  BCe );
-
-        Abu ^= Du;
-        BCa = ROL(Abu, 27);
-        Aga ^= Da;
-        BCe = ROL(Aga, 36);
-        Ake ^= De;
-        BCi = ROL(Ake, 10);
-        Ami ^= Di;
-        BCo = ROL(Ami, 15);
-        Aso ^= Do;
-        BCu = ROL(Aso, 56);
-        Ema =   BCa ^ ((~BCe)&  BCi );
-        Eme =   BCe ^ ((~BCi)&  BCo );
-        Emi =   BCi ^ ((~BCo)&  BCu );
-        Emo =   BCo ^ ((~BCu)&  BCa );
-        Emu =   BCu ^ ((~BCa)&  BCe );
-
-        Abi ^= Di;
-        BCa = ROL(Abi, 62);
-        Ago ^= Do;
-        BCe = ROL(Ago, 55);
-        Aku ^= Du;
-        BCi = ROL(Aku, 39);
-        Ama ^= Da;
-        BCo = ROL(Ama, 41);
-        Ase ^= De;
-        BCu = ROL(Ase,  2);
-        Esa =   BCa ^ ((~BCe)&  BCi );
-        Ese =   BCe ^ ((~BCi)&  BCo );
-        Esi =   BCi ^ ((~BCo)&  BCu );
-        Eso =   BCo ^ ((~BCu)&  BCa );
-        Esu =   BCu ^ ((~BCa)&  BCe );
-
-        //    prepareTheta
-        BCa = Eba ^ Ega ^ Eka ^ Ema ^ Esa;
-        BCe = Ebe ^ Ege ^ Eke ^ Eme ^ Ese;
-        BCi = Ebi ^ Egi ^ Eki ^ Emi ^ Esi;
-        BCo = Ebo ^ Ego ^ Eko ^ Emo ^ Eso;
-        BCu = Ebu ^ Egu ^ Eku ^ Emu ^ Esu;
-
-        //thetaRhoPiChiIotaPrepareTheta(round+1, E, A)
-        Da = BCu ^ ROL(BCe, 1);
-        De = BCa ^ ROL(BCi, 1);
-        Di = BCe ^ ROL(BCo, 1);
-        Do = BCi ^ ROL(BCu, 1);
-        Du = BCo ^ ROL(BCa, 1);
-
-        Eba ^= Da;
-        BCa = Eba;
-        Ege ^= De;
-        BCe = ROL(Ege, 44);
-        Eki ^= Di;
-        BCi = ROL(Eki, 43);
-        Emo ^= Do;
-        BCo = ROL(Emo, 21);
-        Esu ^= Du;
-        BCu = ROL(Esu, 14);
-        Aba =   BCa ^ ((~BCe)&  BCi );
-        Aba ^= (uint64_t)KeccakF_RoundConstants[round + 1];
-        Abe =   BCe ^ ((~BCi)&  BCo );
-        Abi =   BCi ^ ((~BCo)&  BCu );
-        Abo =   BCo ^ ((~BCu)&  BCa );
-        Abu =   BCu ^ ((~BCa)&  BCe );
-
-        Ebo ^= Do;
-        BCa = ROL(Ebo, 28);
-        Egu ^= Du;
-        BCe = ROL(Egu, 20);
-        Eka ^= Da;
-        BCi = ROL(Eka, 3);
-        Eme ^= De;
-        BCo = ROL(Eme, 45);
-        Esi ^= Di;
-        BCu = ROL(Esi, 61);
-        Aga =   BCa ^ ((~BCe)&  BCi );
-        Age =   BCe ^ ((~BCi)&  BCo );
-        Agi =   BCi ^ ((~BCo)&  BCu );
-        Ago =   BCo ^ ((~BCu)&  BCa );
-        Agu =   BCu ^ ((~BCa)&  BCe );
-
-        Ebe ^= De;
-        BCa = ROL(Ebe, 1);
-        Egi ^= Di;
-        BCe = ROL(Egi, 6);
-        Eko ^= Do;
-        BCi = ROL(Eko, 25);
-        Emu ^= Du;
-        BCo = ROL(Emu, 8);
-        Esa ^= Da;
-        BCu = ROL(Esa, 18);
-        Aka =   BCa ^ ((~BCe)&  BCi );
-        Ake =   BCe ^ ((~BCi)&  BCo );
-        Aki =   BCi ^ ((~BCo)&  BCu );
-        Ako =   BCo ^ ((~BCu)&  BCa );
-        Aku =   BCu ^ ((~BCa)&  BCe );
-
-        Ebu ^= Du;
-        BCa = ROL(Ebu, 27);
-        Ega ^= Da;
-        BCe = ROL(Ega, 36);
-        Eke ^= De;
-        BCi = ROL(Eke, 10);
-        Emi ^= Di;
-        BCo = ROL(Emi, 15);
-        Eso ^= Do;
-        BCu = ROL(Eso, 56);
-        Ama =   BCa ^ ((~BCe)&  BCi );
-        Ame =   BCe ^ ((~BCi)&  BCo );
-        Ami =   BCi ^ ((~BCo)&  BCu );
-        Amo =   BCo ^ ((~BCu)&  BCa );
-        Amu =   BCu ^ ((~BCa)&  BCe );
-
-        Ebi ^= Di;
-        BCa = ROL(Ebi, 62);
-        Ego ^= Do;
-        BCe = ROL(Ego, 55);
-        Eku ^= Du;
-        BCi = ROL(Eku, 39);
-        Ema ^= Da;
-        BCo = ROL(Ema, 41);
-        Ese ^= De;
-        BCu = ROL(Ese, 2);
-        Asa =   BCa ^ ((~BCe)&  BCi );
-        Ase =   BCe ^ ((~BCi)&  BCo );
-        Asi =   BCi ^ ((~BCo)&  BCu );
-        Aso =   BCo ^ ((~BCu)&  BCa );
-        Asu =   BCu ^ ((~BCa)&  BCe );
-    }
-
-    //copyToState(state, A)
-    state[ 0] = Aba;
-    state[ 1] = Abe;
-    state[ 2] = Abi;
-    state[ 3] = Abo;
-    state[ 4] = Abu;
-    state[ 5] = Aga;
-    state[ 6] = Age;
-    state[ 7] = Agi;
-    state[ 8] = Ago;
-    state[ 9] = Agu;
-    state[10] = Aka;
-    state[11] = Ake;
-    state[12] = Aki;
-    state[13] = Ako;
-    state[14] = Aku;
-    state[15] = Ama;
-    state[16] = Ame;
-    state[17] = Ami;
-    state[18] = Amo;
-    state[19] = Amu;
-    state[20] = Asa;
-    state[21] = Ase;
-    state[22] = Asi;
-    state[23] = Aso;
-    state[24] = Asu;
-
-#undef    round
+    KeccakP1600_Permute_Nrounds((KeccakP1600_plain32_state *)state, 24);
 }
