@@ -28,6 +28,19 @@ Please refer to LowLevel.build for the exact list of other files it must be comb
 #include "keccakf1600.h"
 #include "SnP-Relaned.h"
 
+#define IS_BIG_ENDIAN      4321
+#define IS_LITTLE_ENDIAN   1234
+
+#if defined(__arm__)
+# ifdef __BIG_ENDIAN
+#  define PLATFORM_BYTE_ORDER IS_BIG_ENDIAN
+# else
+#  define PLATFORM_BYTE_ORDER IS_LITTLE_ENDIAN
+# endif
+#else
+#error "endianness unknown"
+#endif
+
 #define ROL32(a, offset) ((((uint32_t)a) << (offset)) ^ (((uint32_t)a) >> (32-(offset))))
 
 /* Credit to Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
