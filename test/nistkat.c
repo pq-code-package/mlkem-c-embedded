@@ -37,7 +37,7 @@ size_t format_bstr(char *buf, const char *S, const uint8_t *A, size_t L) {
 
 void inc_hash_bstr(shake256incctx *state, const char *S, const uint8_t *A, size_t L) {
     size_t len;
-    char buf[strlen(S) + 2 * L + 1];
+    char buf[strlen(S) + 2 * L + 2];
 
     len = format_bstr(buf, S, A, L);
     len += snprintf(buf + strlen(S) + 2 * L, 2, "\n");

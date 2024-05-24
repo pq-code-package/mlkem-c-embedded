@@ -60,9 +60,10 @@ LIBDEPS += obj/libhal.a
 include mk/$(PLATFORM).mk
 
 CFLAGS += \
+	-O3 \
 	-std=gnu99 \
 	--sysroot=$(SYSROOT) \
-	-Wall -Wextra -Wshadow \
+	-Wall -Wextra -Wshadow -Werror \
 	-MMD \
 	-fno-common \
 	-Imlkem -Ifips202 -Ihal \

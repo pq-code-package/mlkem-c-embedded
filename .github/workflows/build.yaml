@@ -26,17 +26,21 @@ jobs:
       shell: nix develop .#ci -c bash -e {0}
       run: |
           make_platform() {
-            echo "::group::make platform $1"
-            make PLATFORM="$1"
-            echo "::endgroup::"
+              echo "::group::make platform $1"
+              make PLATFORM="$1"
+              code1=$?
+              echo "::endgroup::"
 
-            echo "::group::make platform $1 nistkat"
-            make PLATFORM="$1" RNG=NISTKAT nistkat
-            echo "::endgroup::"
+              echo "::group::make platform $1 nistkat"
+              make PLATFORM="$1" RNG=NISTKAT nistkat
+              code2=$?
+              echo "::endgroup::"
+
+              return $(( code1 || code2 ))
           }
 
           export -f make_platform
-          tests --list-platforms | grep -v "mps2" | xargs -I {} bash -c 'make_platform "$@"' _ {}
+          tests --list-platforms | grep -v "mps2" | xargs -I {} bash -c 'make_platform "$@" || exit 1' _ {}
 
     - name: Functional test
       id: func_test
