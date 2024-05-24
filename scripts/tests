@@ -202,6 +202,10 @@ def base_test(
     )
     logging.info(format(subprocess.list2cmdline(p.args)))
 
+    if p.returncode != 0:
+        logging.error("make failed")
+        sys.exit(1)
+
     def check(file, expect, actual):
         if actual != expect:
             logging.error(
