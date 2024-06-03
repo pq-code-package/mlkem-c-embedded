@@ -4,7 +4,7 @@
   description = "mlkem-c-embedded";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
@@ -32,16 +32,16 @@
               # formatter & linters
               nixpkgs-fmt
               shfmt
-              astyle# 3.4.10
+              astyle# 3.4.15
 
               # build dependencies
               gcc-arm-embedded-13# arm-gnu-toolchain-13.2.rel1
-              python311
-              qemu# 8.1.5
+              qemu# 8.2.4
 
               yq;
 
             inherit (pkgs.python311Packages)
+              python
               black
               pyserial# 3.5
               click;
