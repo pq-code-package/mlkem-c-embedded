@@ -6,6 +6,7 @@
 #include "reduce.h"
 #include "cbd.h"
 #include "symmetric.h"
+#include "verify.h"
 
 /*************************************************
 * Name:        poly_compress
@@ -433,7 +434,6 @@ void poly_frombytes_basemul_montgomery(poly *r, const poly *b, const unsigned ch
 **************************************************/
 void poly_frommsg(poly *r, const uint8_t msg[MLKEM_INDCPA_MSGBYTES]) {
     unsigned int i, j;
-    int16_t mask;
 
     #if (MLKEM_INDCPA_MSGBYTES != MLKEM_N/8)
 #error "MLKEM_INDCPA_MSGBYTES must be equal to MLKEM_N/8 bytes!"
@@ -441,8 +441,8 @@ void poly_frommsg(poly *r, const uint8_t msg[MLKEM_INDCPA_MSGBYTES]) {
 
     for (i = 0; i < MLKEM_N / 8; i++) {
         for (j = 0; j < 8; j++) {
-            mask = -(int16_t)((msg[i] >> j) & 1);
-            r->coeffs[8 * i + j] = mask & ((MLKEM_Q + 1) / 2);
+            r->coeffs[8 * i + j] = 0;
+            cmov_int16(r->coeffs + 8 * i + j, ((MLKEM_Q + 1) / 2), (msg[i] >> j) & 1);
         }
     }
 }
