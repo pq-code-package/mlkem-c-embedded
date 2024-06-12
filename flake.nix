@@ -4,7 +4,7 @@
   description = "mlkem-c-embedded";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
@@ -24,24 +24,31 @@
           mbed-os = pkgs.callPackage ./mbed-os.nix {
             targets = [ "TARGET_MPS2_M3" "TARGET_MPS2_M4" "TARGET_MPS2_M7" ];
           };
+          astyle = pkgs.astyle.overrideAttrs (old: rec {
+            version = "3.4.13";
+            src = pkgs.fetchurl {
+              url = "mirror://sourceforge/${old.pname}/${old.pname}-${version}.tar.bz2";
+              hash = "sha256-eKYQq9OelOD5E+nuXNoehbtizWM1U97LngDT2SAQGc4=";
+            };
+          });
           core = builtins.attrValues {
             libopencm3 = libopencm3;
             mbed-os = mbed-os;
+            astyle = astyle;
 
             inherit (pkgs)
               # formatter & linters
               nixpkgs-fmt
               shfmt
-              astyle# 3.4.10
 
               # build dependencies
               gcc-arm-embedded-13# arm-gnu-toolchain-13.2.rel1
-              python311
-              qemu# 8.1.5
+              qemu# 8.2.4
 
               yq;
 
             inherit (pkgs.python311Packages)
+              python
               black
               pyserial# 3.5
               click;
