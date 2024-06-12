@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "hal.h"
 #include "kem.h"
+#include "ntt.h"
+#include "poly.h"
 #include "sendfn.h"
 #include "randombytes.h"
 
@@ -18,8 +20,10 @@ int main(void) {
     unsigned char sk[CRYPTO_SECRETKEYBYTES];
     unsigned char pk[CRYPTO_PUBLICKEYBYTES];
     unsigned char ct[CRYPTO_CIPHERTEXTBYTES];
+    poly r, a, b;
     unsigned char kg_rand[2 * CRYPTO_BYTES], enc_rand[CRYPTO_BYTES];
     uint64_t cycles_kg[NTESTS], cycles_enc[NTESTS], cycles_dec[NTESTS];
+    uint64_t *cycles = cycles_kg;
     unsigned long long t0, t1;
     int i;
 
@@ -59,7 +63,6 @@ int main(void) {
     } else {
         hal_send_str("OK KEYS\n");
     }
-    hal_send_str("+");
 
     qsort(cycles_kg, NTESTS, sizeof(uint64_t), cmp_uint64_t);
     qsort(cycles_enc, NTESTS, sizeof(uint64_t), cmp_uint64_t);
@@ -68,6 +71,51 @@ int main(void) {
     printcycles("keypair cycles", cycles_kg[NTESTS >> 1]);
     printcycles("encaps cycles", cycles_enc[NTESTS >> 1]);
     printcycles("decaps cycles", cycles_dec[NTESTS >> 1]);
+
+    for (i = 0; i < NTESTS; i++) {
+        // NTT
+        t0 = hal_get_time();
+        ntt(a.coeffs);
+        t1 = hal_get_time();
+        cycles[i] = t1 - t0;
+    }
+
+    qsort(cycles, NTESTS, sizeof(uint64_t), cmp_uint64_t);
+    printcycles("ntt cycles", cycles[NTESTS >> 1]);
+
+    for (i = 0; i < NTESTS; i++) {
+        // INVNTT
+        t0 = hal_get_time();
+        invntt(a.coeffs);
+        t1 = hal_get_time();
+        cycles[i] = t1 - t0;
+    }
+
+    qsort(cycles, NTESTS, sizeof(uint64_t), cmp_uint64_t);
+    printcycles("invntt cycles", cycles[NTESTS >> 1]);
+
+    for (i = 0; i < NTESTS; i++) {
+        // Basemul
+        t0 = hal_get_time();
+        poly_basemul(&r, &a, &b);
+        t1 = hal_get_time();
+        cycles[i] = t1 - t0;
+    }
+
+    qsort(cycles, NTESTS, sizeof(uint64_t), cmp_uint64_t);
+    printcycles("basemul cycles", cycles[NTESTS >> 1]);
+
+    for (i = 0; i < NTESTS; i++) {
+        // Basemul_acc
+        t0 = hal_get_time();
+        poly_basemul_acc(&r, &a, &b);
+        t1 = hal_get_time();
+        cycles[i] = t1 - t0;
+    }
+    qsort(cycles, NTESTS, sizeof(uint64_t), cmp_uint64_t);
+    printcycles("basemul_acc cycles", cycles[NTESTS >> 1]);
+
+    hal_send_str("+");
 
     SERIAL_MARKER();
 
