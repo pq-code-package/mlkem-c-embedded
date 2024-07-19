@@ -6,17 +6,22 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 
+    esp-dev = {
+      url = "github:mirrexagon/nixpkgs-esp-dev?rev=86a2bbe01fe0258887de7396af2a5eb0e37ac3be";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
   };
 
-  outputs = inputs@{ flake-parts, ... }:
+  outputs = inputs@{ flake-parts, esp-dev, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ ];
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-      perSystem = { pkgs, ... }:
+      perSystem = { pkgs, system, ... }:
         let
           libopencm3 = pkgs.callPackage ./libopencm3.nix {
             targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
@@ -35,6 +40,8 @@
             });
 
             inherit (pkgs)
+              esp-idf-esp32c3
+
               # formatter & linters
               nixpkgs-fmt
               shfmt
@@ -66,6 +73,13 @@
             });
         in
         {
+          _module.args = {
+            pkgs = import inputs.nixpkgs {
+              inherit system;
+              overlays = [ esp-dev.overlays.default ];
+            };
+          };
+
           devShells.default = wrapShell pkgs.mkShellNoCC {
             packages = core ++ arm-pkgs ++ builtins.attrValues {
               inherit (pkgs)
