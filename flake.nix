@@ -40,8 +40,6 @@
             });
 
             inherit (pkgs)
-              esp-idf-esp32c3
-
               # formatter & linters
               nixpkgs-fmt
               shfmt
@@ -65,6 +63,11 @@
               gcc-arm-embedded-13; # arm-gnu-toolchain-13.2.rel1
           };
 
+          riscv-pkgs = builtins.attrValues {
+            inherit (pkgs)
+              esp-idf-esp32c3;
+          };
+
           wrapShell = mkShell: attrs:
             mkShell (attrs // {
               shellHook = ''
@@ -81,7 +84,7 @@
           };
 
           devShells.default = wrapShell pkgs.mkShellNoCC {
-            packages = core ++ arm-pkgs ++ builtins.attrValues {
+            packages = core ++ arm-pkgs ++ riscv-pkgs ++ builtins.attrValues {
               inherit (pkgs)
                 direnv
                 nix-direnv
@@ -97,6 +100,10 @@
             packages = core ++ arm-pkgs;
             OPENCM3_DIR = ''${libopencm3}'';
             MBED_OS_DIR = ''${mbed-os}'';
+          };
+
+          devShells.ci-riscv = wrapShell pkgs.mkShellNoCC {
+            packages = core ++ riscv-pkgs;
           };
         };
       flake = {
