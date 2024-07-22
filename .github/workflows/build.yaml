@@ -9,21 +9,23 @@ on:
 jobs:
   build_test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: nix develop .#ci -c bash -e {0}
     steps:
     - uses: actions/checkout@v4
     - name: Setup nix
       uses: ./.github/actions/setup-nix
       with:
+        devShell: ci
         script: |
           astyle --version
           arm-none-eabi-gcc --version
           qemu-system-arm --version
     - name: Lint
-      shell: nix develop .#ci -c bash -e {0}
       run: |
           lint
     - name: Build targets
-      shell: nix develop .#ci -c bash -e {0}
       run: |
           make_platform() {
               echo "::group::make platform $1"
@@ -44,12 +46,10 @@ jobs:
 
     - name: Functional test
       id: func_test
-      shell: nix develop .#ci -c bash -e {0}
       run: |
           tests-qemu func
     - name: Speed test
       id: speed_test
-      shell: nix develop .#ci -c bash -e {0}
       if: |
         success()
         || steps.func_test.conclusion == 'failure'
@@ -57,7 +57,6 @@ jobs:
           tests-qemu speed
     - name: Stack test
       id: stack_test
-      shell: nix develop .#ci -c bash -e {0}
       if: |
         success()
         || steps.func_test.conclusion == 'failure'
@@ -65,7 +64,6 @@ jobs:
       run: |
           tests-qemu stack
     - name: Nistkat test
-      shell: nix develop .#ci -c bash -e {0}
       if: |
         success()
         || steps.func_test.conclusion == 'failure'
