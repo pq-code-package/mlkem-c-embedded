@@ -24,17 +24,15 @@
           mbed-os = pkgs.callPackage ./mbed-os.nix {
             targets = [ "TARGET_MPS2_M3" "TARGET_MPS2_M4" "TARGET_MPS2_M7" ];
           };
-          astyle = pkgs.astyle.overrideAttrs (old: rec {
-            version = "3.4.13";
-            src = pkgs.fetchurl {
-              url = "mirror://sourceforge/${old.pname}/${old.pname}-${version}.tar.bz2";
-              hash = "sha256-eKYQq9OelOD5E+nuXNoehbtizWM1U97LngDT2SAQGc4=";
-            };
-          });
+
           core = builtins.attrValues {
-            libopencm3 = libopencm3;
-            mbed-os = mbed-os;
-            astyle = astyle;
+            astyle = pkgs.astyle.overrideAttrs (old: rec {
+              version = "3.4.13";
+              src = pkgs.fetchurl {
+                url = "mirror://sourceforge/${old.pname}/${old.pname}-${version}.tar.bz2";
+                hash = "sha256-eKYQq9OelOD5E+nuXNoehbtizWM1U97LngDT2SAQGc4=";
+              };
+            });
 
             inherit (pkgs)
               # formatter & linters
@@ -42,7 +40,6 @@
               shfmt
 
               # build dependencies
-              gcc-arm-embedded-13# arm-gnu-toolchain-13.2.rel1
               qemu# 8.2.4
 
               yq;
@@ -53,10 +50,24 @@
               pyserial# 3.5
               click;
           };
+
+          arm-pkgs = builtins.attrValues {
+            libopencm3 = libopencm3;
+            mbed-os = mbed-os;
+            inherit (pkgs)
+              gcc-arm-embedded-13; # arm-gnu-toolchain-13.2.rel1
+          };
+
+          wrapShell = mkShell: attrs:
+            mkShell (attrs // {
+              shellHook = ''
+                export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
+              '';
+            });
         in
         {
-          devShells.default = pkgs.mkShellNoCC {
-            packages = core ++ builtins.attrValues {
+          devShells.default = wrapShell pkgs.mkShellNoCC {
+            packages = core ++ arm-pkgs ++ builtins.attrValues {
               inherit (pkgs)
                 direnv
                 nix-direnv
@@ -64,23 +75,14 @@
                 # debug dependencies
                 openocd; # 0.12.0
             };
-
-            shellHook = ''
-              export OPENCM3_DIR=${libopencm3}
-              export MBED_OS_DIR=${mbed-os}
-              export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
-              eval "$(_TESTS_COMPLETE=bash_source tests)"
-            '';
+            OPENCM3_DIR = ''${libopencm3}'';
+            MBED_OS_DIR = ''${mbed-os}'';
           };
 
-          devShells.ci = pkgs.mkShellNoCC {
-            packages = core;
-
-            shellHook = ''
-              export OPENCM3_DIR=${libopencm3}
-              export MBED_OS_DIR=${mbed-os}
-              export PATH=$PWD/scripts:$PWD/scripts/ci:$PATH
-            '';
+          devShells.ci = wrapShell pkgs.mkShellNoCC {
+            packages = core ++ arm-pkgs;
+            OPENCM3_DIR = ''${libopencm3}'';
+            MBED_OS_DIR = ''${mbed-os}'';
           };
         };
       flake = {
