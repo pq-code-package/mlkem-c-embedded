@@ -23,13 +23,6 @@
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
       perSystem = { pkgs, system, ... }:
         let
-          libopencm3 = pkgs.callPackage ./libopencm3.nix {
-            targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
-          };
-          mbed-os = pkgs.callPackage ./mbed-os.nix {
-            targets = [ "TARGET_MPS2_M3" "TARGET_MPS2_M4" "TARGET_MPS2_M7" ];
-          };
-
           core = builtins.attrValues {
             astyle = pkgs.astyle.overrideAttrs (old: rec {
               version = "3.4.13";
@@ -57,8 +50,14 @@
           };
 
           arm-pkgs = builtins.attrValues {
-            libopencm3 = libopencm3;
-            mbed-os = mbed-os;
+            libopencm3 = pkgs.callPackage ./libopencm3.nix {
+              targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
+            };
+
+            mbed-os = pkgs.callPackage ./mbed-os.nix {
+              targets = [ "TARGET_MPS2_M3" "TARGET_MPS2_M4" "TARGET_MPS2_M7" ];
+            };
+
             inherit (pkgs)
               gcc-arm-embedded-13; # arm-gnu-toolchain-13.2.rel1
           };
@@ -91,14 +90,10 @@
                 # debug dependencies
                 openocd; # 0.12.0
             };
-            OPENCM3_DIR = ''${libopencm3}'';
-            MBED_OS_DIR = ''${mbed-os}'';
           };
 
           devShells.ci = wrapShell pkgs.mkShellNoCC {
             packages = core ++ arm-pkgs;
-            OPENCM3_DIR = ''${libopencm3}'';
-            MBED_OS_DIR = ''${mbed-os}'';
           };
 
           devShells.ci-riscv = wrapShell pkgs.mkShellNoCC {
