@@ -64,8 +64,7 @@
           };
 
           riscv-pkgs = builtins.attrValues {
-            inherit (pkgs)
-              esp-idf-esp32c3;
+            esp-idf-lib = pkgs.callPackage ./esp-idf-lib.nix { };
           };
 
           wrapShell = mkShell: attrs:
