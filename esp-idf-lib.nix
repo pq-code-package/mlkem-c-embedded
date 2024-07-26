@@ -8,8 +8,9 @@
 , fetchPypi
 }:
 let
-  version = "v5.2.2";
+  version = "v5.3";
 
+  # new dependency for v5.2.x
   pyclang = python3Packages.buildPythonPackage rec {
     pname = "pyclang";
     version = "0.4.2";
@@ -22,13 +23,37 @@ let
     doCheck = false;
   };
 
+  # new dependency for v5.3
+  esp-idf-nvs-partition-gen = python3Packages.buildPythonPackage rec {
+    pname = "esp_idf_nvs_partition_gen";
+    version = "0.1.2";
+    format = "pyproject";
+
+    src = fetchPypi {
+      inherit pname version;
+      sha256 = "sha256-HjW5RCKfy83LQgAs0tOW/f9LPVoLwHY1pyb6ar+AxwY=";
+    };
+
+    propagatedBuildInputs = builtins.attrValues {
+      inherit (python3Packages)
+        setuptools
+        cryptography;
+    };
+
+    doCheck = false;
+  };
+
   esp-idf-esp32c3' = (esp-idf-esp32c3.overrideAttrs (old: {
-    propagatedBuildInputs = builtins.filter (p: p != git) old.propagatedBuildInputs ++ [ pyclang ];
+    propagatedBuildInputs = builtins.filter (p: p != git) old.propagatedBuildInputs ++
+      [
+        pyclang
+        esp-idf-nvs-partition-gen
+      ];
     patches = [ ];
   })
   ).override {
     rev = version;
-    sha256 = "sha256-I4YxxSGdQT8twkoFx3zmZhyLTSagmeLD2pygVfY/pEk=";
+    sha256 = "sha256-w+xyva4t21STVtfYZOXY2xw6sDc2XvJXBZSx+wd1N6Y=";
   };
 in
 stdenvNoCC.mkDerivation {
