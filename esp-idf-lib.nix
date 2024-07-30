@@ -78,7 +78,9 @@ stdenvNoCC.mkDerivation {
     idf.py -C hello_world build
   '';
   installPhase = ''
-    mkdir -p $out/esp32c3
-    mv ./hello_world/build/esp-idf/* $out/esp32c3/
+    mkdir -p $out/esp32c3/bootloader
+    mv ./hello_world/build/esp-idf $out/esp32c3/
+    mv ./hello_world/build/bootloader/esp-idf $out/esp32c3/bootloader
+    mv ./hello_world/build/bootloader/config $out/esp32c3/bootloader
   '';
 }
