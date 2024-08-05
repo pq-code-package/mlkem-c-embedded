@@ -2,8 +2,7 @@
 
 .PHONY: all
 
-all: test speed stack
-
+all: test speed stack nistkat
 
 include mk/config.mk
 include mk/schemes.mk
@@ -11,10 +10,7 @@ include mk/rules.mk
 
 Q ?= @
 
-test: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-test)
-speed: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-speed)
-stack: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-stack)
-nistkat: $(foreach scheme,$(KEM_SCHEMES),$(scheme)-nistkat)
+$(TESTS): % : $(call SCHEMES,%)
 
 .PHONY: emulate clean
 

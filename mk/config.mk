@@ -88,6 +88,8 @@ LDFLAGS += \
 NTESTS ?= 1
 RETAINED_VARS += NTESTS
 
+TESTS = test speed stack nistkat
+
 KEM_SCHEMES=mlkem512 mlkem768 mlkem1024
 # mlkem k
 KEM_PARAMS=2 3 4
