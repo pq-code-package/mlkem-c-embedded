@@ -1,4 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
+ifeq ($(RNG),NISTKAT)
+	LIBHAL_SRC = \
+		test/common/nistkatrng.c \
+		test/common/aes.c
+	CPPFLAGS += -Itest/common
+else
+	RNG := HAL
+	LIBHAL_SRC = hal/randombytes.c
+endif
+
 OPENCM3_DIR ?=
 override LDSCRIPT := obj/generated.$(DEVICE).ld
 

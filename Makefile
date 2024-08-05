@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-.PHONY: all
+.PHONY: all test speed stack nistkat
 
 all: test speed stack nistkat
 
@@ -10,7 +10,15 @@ include mk/rules.mk
 
 Q ?= @
 
-$(TESTS): % : $(call SCHEMES,%)
+nistkat:
+	$(Q)$(MAKE) RNG=NISTKAT PLATFORM=$(PLATFORM) mlkem512-$@
+	$(Q)$(MAKE) RNG=NISTKAT PLATFORM=$(PLATFORM) mlkem768-$@
+	$(Q)$(MAKE) RNG=NISTKAT PLATFORM=$(PLATFORM) mlkem1024-$@
+
+test speed stack:
+	$(Q)$(MAKE) PLATFORM=$(PLATFORM) mlkem512-$@
+	$(Q)$(MAKE) PLATFORM=$(PLATFORM) mlkem768-$@
+	$(Q)$(MAKE) PLATFORM=$(PLATFORM) mlkem1024-$@
 
 .PHONY: emulate clean
 

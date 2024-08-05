@@ -4,10 +4,8 @@ FIPS202_SOURCES = $(wildcard fips202/*.c)
 
 OBJS = $(call objs,$(addprefix $(1)/,$(notdir $(basename $(MLKEM_SOURCES)))) $(basename $(FIPS202_SOURCES)))
 
-SCHEMES = $(KEM_SCHEMES:%=%-$(1))
-
 # all tests x all schemes
-SCHEMES_TESTS = $(foreach t,$(TESTS),$(call SCHEMES,$(t)))
+SCHEMES_TESTS = $(foreach t,$(TESTS),$(KEM_SCHEMES:%=%-$(t)))
 
 # set up tests dependencies for each scheme
 define SCHEME_DEPS

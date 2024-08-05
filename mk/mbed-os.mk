@@ -1,4 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
+ifeq ($(RNG),NISTKAT)
+	LIBHAL_SRC = \
+		test/common/nistkatrng.c \
+		test/common/aes.c
+	CPPFLAGS += -Itest/common
+else
+	RNG := NOTRAND
+	LIBHAL_SRC = hal/notrandombytes.c
+endif
+
 LDSCRIPT = obj/generated.$(PLATFORM).ld
 
 CFLAGS += $(ARCH_FLAGS)
@@ -23,4 +33,3 @@ $(LDSCRIPT): 	$(MBED_OS_TARGET_DIR)/TOOLCHAIN_GCC_ARM/MPS2.ld
 $(LDSCRIPT): CPPFLAGS += $(MPS2_DEPS) $(if $(RNG)==NISTKAT,-Itest/common)
 
 LINKDEPS += $(LDSCRIPT) $(LIBDEPS)
-

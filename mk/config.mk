@@ -39,22 +39,8 @@ RNG ?= HAL
 
 RETAINED_VARS += PLATFORM RNG
 
-# RNG config
-ifeq ($(RNG),HAL)
-	LIBHAL_SRC = hal/randombytes.c
-else ifeq ($(RNG),NOTRAND)
-	LIBHAL_SRC = hal/notrandombytes.c
-else ifeq ($(RNG),NISTKAT)
-	LIBHAL_SRC = \
-		test/common/nistkatrng.c \
-		test/common/aes.c
-	CPPFLAGS += -Itest/common
-endif
-
 LDLIBS += -lhal
 LIBDEPS += obj/libhal.a
-
-# HAL config
 
 # Common config
 include mk/$(PLATFORM).mk
