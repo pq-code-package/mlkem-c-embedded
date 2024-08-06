@@ -16,10 +16,16 @@ SIZE := $(CROSS_PREFIX)-size
 ##############################
 # Include retained variables #
 ##############################
+PLATFORM ?= stm32f4discovery
+RNG ?= HAL
+RETAINED_VARS := PLATFORM RNG
 
-RETAINED_VARS :=
+BUILD_DIR := build
+BUILD_PLATFORM_DIR := $(BUILD_DIR)/$(PLATFORM)
+OBJ_DIR := $(BUILD_PLATFORM_DIR)/obj
+BIN_DIR := $(BUILD_PLATFORM_DIR)/bin
 
-CONFIG := obj/.config.mk
+CONFIG := $(BUILD_PLATFORM_DIR)/config.mk
 
 -include $(CONFIG)
 
@@ -32,31 +38,13 @@ $(CONFIG):
 ###############
 # Some Macros #
 ###############
-objs = $(addprefix obj/,$(addsuffix .o,$(1)))
 
-PLATFORM ?= stm32f4discovery
-RNG ?= HAL
-
-RETAINED_VARS += PLATFORM RNG
-
-# RNG config
-ifeq ($(RNG),HAL)
-	LIBHAL_SRC = hal/randombytes.c
-else ifeq ($(RNG),NOTRAND)
-	LIBHAL_SRC = hal/notrandombytes.c
-else ifeq ($(RNG),NISTKAT)
-	LIBHAL_SRC = \
-		test/common/nistkatrng.c \
-		test/common/aes.c
-	CPPFLAGS += -Itest/common
-endif
-
-LDLIBS += -lhal
-LIBDEPS += obj/libhal.a
-
-# HAL config
+LDLIBS += -lhal -L$(OBJ_DIR)/hal
+LIBDEPS += $(OBJ_DIR)/hal/libhal.a
 
 # Common config
+objs = $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(1)))
+
 include mk/$(PLATFORM).mk
 
 CFLAGS += \
@@ -82,11 +70,12 @@ LDFLAGS += \
 	-Wl,--wrap=_fstat \
 	-Wl,--wrap=_getpid \
 	-ffreestanding \
-	-Lobj \
 	-Wl,--gc-sections
 
 NTESTS ?= 1
 RETAINED_VARS += NTESTS
+
+TESTS = test speed stack nistkat
 
 KEM_SCHEMES=mlkem512 mlkem768 mlkem1024
 # mlkem k

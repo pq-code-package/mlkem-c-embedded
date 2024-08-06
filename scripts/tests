@@ -219,7 +219,7 @@ def base_test(
         dev = usbdev(uart)
 
     for scheme in ["mlkem512", "mlkem768", "mlkem1024"]:
-        file = f"elf/{scheme}-{test_type}.elf"
+        file = f"build/{platform}/bin/{scheme}-{test_type}.elf"
         expect = expect_proc(scheme)
         if platform_cfg is None:
             raw = subprocess.run(
