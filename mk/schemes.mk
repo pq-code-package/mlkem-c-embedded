@@ -13,7 +13,7 @@ $(TESTS:%=$(1)-%): CPPFLAGS += -DMLKEM_K=$(2) -DNTESTS=$(NTESTS)
 endef
 
 define SCHEME_ELF_DEPS
-$(TESTS:%=elf/$(1)-%.elf): elf/%.elf: obj/test/%.o $(call OBJS,$(1)) $(LINKDEPS)
+$(TESTS:%=$(BIN_DIR)/$(1)-%.elf): $(BIN_DIR)/%.elf: $(OBJ_DIR)/test/%.o $(call OBJS,$(1)) $(LINKDEPS)
 endef
 
 define COMPILE_OBJ
@@ -24,16 +24,16 @@ endef
 
 # compile object file for each scheme
 define SCHEME_OBJ
-obj/$(1)/%.o: mlkem/%.c $(CONFIG)
+$(OBJ_DIR)/$(1)/%.o: mlkem/%.c $(CONFIG)
 	$$(COMPILE_OBJ)
 endef
 
 define SCHEME_TEST_OBJS
-obj/test/$(1)-%.o: test/%.c $(CONFIG)
+$(OBJ_DIR)/test/$(1)-%.o: test/%.c $(CONFIG)
 	$$(COMPILE_OBJ)
 endef
 
-$(SCHEMES_TESTS): % : bin/%.bin bin/%.hex
+$(SCHEMES_TESTS): % : $(BIN_DIR)/%.bin $(BIN_DIR)/%.hex
 
 $(eval $(call SCHEME_DEPS,mlkem512,2))
 $(eval $(call SCHEME_DEPS,mlkem768,3))

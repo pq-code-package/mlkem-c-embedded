@@ -26,6 +26,4 @@ emulate:
 	$(Q)qemu-system-arm -machine $(PLATFORM) -nographic -semihosting -kernel $(ELF_FILE)
 
 clean:
-	$(Q)rm -rf elf/
-	$(Q)rm -rf bin/
-	$(Q)rm -rf obj/
+	$(Q)rm -rf build/

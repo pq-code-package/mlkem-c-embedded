@@ -16,10 +16,16 @@ SIZE := $(CROSS_PREFIX)-size
 ##############################
 # Include retained variables #
 ##############################
+PLATFORM ?= stm32f4discovery
+RNG ?= HAL
+RETAINED_VARS := PLATFORM RNG
 
-RETAINED_VARS :=
+BUILD_DIR := build
+BUILD_PLATFORM_DIR := $(BUILD_DIR)/$(PLATFORM)
+OBJ_DIR := $(BUILD_PLATFORM_DIR)/obj
+BIN_DIR := $(BUILD_PLATFORM_DIR)/bin
 
-CONFIG := obj/.config.mk
+CONFIG := $(BUILD_PLATFORM_DIR)/config.mk
 
 -include $(CONFIG)
 
@@ -32,17 +38,13 @@ $(CONFIG):
 ###############
 # Some Macros #
 ###############
-objs = $(addprefix obj/,$(addsuffix .o,$(1)))
 
-PLATFORM ?= stm32f4discovery
-RNG ?= HAL
-
-RETAINED_VARS += PLATFORM RNG
-
-LDLIBS += -lhal -Lobj/hal
-LIBDEPS += obj/hal/libhal.a
+LDLIBS += -lhal -L$(OBJ_DIR)/hal
+LIBDEPS += $(OBJ_DIR)/hal/libhal.a
 
 # Common config
+objs = $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(1)))
+
 include mk/$(PLATFORM).mk
 
 CFLAGS += \

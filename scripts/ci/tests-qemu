@@ -13,7 +13,6 @@ _run()
   echo "::group:: $test_type test for $platform"
   tests "$test_type" "$platform" -v
   code=$?
-  sleep 1
   echo "::endgroup::"
   return $code
 }
