@@ -18,7 +18,7 @@ include $(OPENCM3_DIR)/mk/gcc-rules.mk
 
 LIBHAL_SRC += hal/hal-opencm3.c
 
-obj/libhal.a: $(call objs,$(LIBHAL_SRC))
+obj/hal/libhal.a: $(call objs,$(LIBHAL_SRC))
 
 CFLAGS += $(ARCH_FLAGS)
 

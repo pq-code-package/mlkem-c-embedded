@@ -18,12 +18,19 @@ LDFLAGS += \
 	-T$(LDSCRIPT) \
 	$(ARCH_FLAGS)
 
-LIBHAL_SRC += hal/hal-mps2.c $(MBED_OS_TARGET_DIR)/TOOLCHAIN_GCC_ARM/startup_MPS2.S
+LIBHAL_SRC += hal/hal-mps2.c
+STARTUP_SRC = $(MBED_OS_TARGET_DIR)/TOOLCHAIN_GCC_ARM/startup_MPS2.S
+STARTUP_OBJ = $(shell echo "$(STARTUP_SRC)" | sed -E 's/(.*\/)(TARGET.*)/obj\/hal\/\2.o/g')
 
 MPS2_DEPS += -I$(MBED_OS_DIR)/Include -I$(MBED_OS_TARGET_DIR)
 
-obj/libhal.a: $(call objs,$(LIBHAL_SRC))
-obj/libhal.a: CPPFLAGS += $(MPS2_DEPS) $(if $(RNG)==NISTKAT,-Itest/common)
+obj/hal/libhal.a: $(call objs,$(LIBHAL_SRC)) $(STARTUP_OBJ)
+obj/hal/libhal.a: CPPFLAGS += $(MPS2_DEPS) $(if $(RNG)==NISTKAT,-Itest/common)
+
+$(STARTUP_OBJ): $(STARTUP_SRC)
+	@echo "  AS      $@"
+	$(Q)[ -d $(@D) ] || mkdir -p $(@D)
+	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
 
 $(LDSCRIPT): 	$(MBED_OS_TARGET_DIR)/TOOLCHAIN_GCC_ARM/MPS2.ld
 	@printf "  GENLNK  $@\n"; \

@@ -39,8 +39,8 @@ RNG ?= HAL
 
 RETAINED_VARS += PLATFORM RNG
 
-LDLIBS += -lhal
-LIBDEPS += obj/libhal.a
+LDLIBS += -lhal -Lobj/hal
+LIBDEPS += obj/hal/libhal.a
 
 # Common config
 include mk/$(PLATFORM).mk
@@ -68,7 +68,6 @@ LDFLAGS += \
 	-Wl,--wrap=_fstat \
 	-Wl,--wrap=_getpid \
 	-ffreestanding \
-	-Lobj \
 	-Wl,--gc-sections
 
 NTESTS ?= 1
