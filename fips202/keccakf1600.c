@@ -31,8 +31,8 @@ Please refer to LowLevel.build for the exact list of other files it must be comb
 #define IS_BIG_ENDIAN      4321
 #define IS_LITTLE_ENDIAN   1234
 
-#if defined(__arm__)
-# ifdef __BIG_ENDIAN
+#if defined(__arm__) || defined(__riscv)
+# if defined(__BIG_ENDIAN) || defined(__ORDER_BIG_ENDIAN__)
 #  define PLATFORM_BYTE_ORDER IS_BIG_ENDIAN
 # else
 #  define PLATFORM_BYTE_ORDER IS_LITTLE_ENDIAN
@@ -152,7 +152,7 @@ void KeccakP1600_AddLanes(KeccakP1600_plain32_state *state, const unsigned char 
                         | ((uint32_t)(laneAsBytes[5]) << 8)
                         | ((uint32_t)(laneAsBytes[6]) << 16)
                         | ((uint32_t)(laneAsBytes[7]) << 24);
-        uint32_t even, odd, temp, temp0, temp1;
+        uint32_t temp, temp0, temp1;
         uint32_t *stateAsHalfLanes = state->A;
         toBitInterleavingAndXOR(low, high, stateAsHalfLanes[lanePosition * 2 + 0], stateAsHalfLanes[lanePosition * 2 + 1], temp, temp0, temp1);
     }
@@ -203,7 +203,7 @@ static void KeccakP1600_ExtractLanes(const KeccakP1600_plain32_state *state, uns
     #else
     unsigned int lanePosition;
     for (lanePosition = 0; lanePosition < laneCount; lanePosition++) {
-        uint32_t *stateAsHalfLanes = state->A;
+        const uint32_t *stateAsHalfLanes = state->A;
         uint32_t low, high, temp, temp0, temp1;
         fromBitInterleaving(stateAsHalfLanes[lanePosition * 2], stateAsHalfLanes[lanePosition * 2 + 1], low, high, temp, temp0, temp1);
         uint8_t laneAsBytes[8];
