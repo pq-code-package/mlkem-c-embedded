@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 # GCC config
 CROSS_PREFIX ?=
 CC := $(CROSS_PREFIX)gcc
