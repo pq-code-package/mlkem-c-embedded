@@ -22,7 +22,7 @@ else
 	LIBHAL_SRC = hal/notrandombytes.c
 endif
 
-LIBHAL_SRC += hal/hal-esp-idf.c
+LIBHAL_SRC += hal/hal-esp-idf.c hal/esp32c3_start.S
 
 $(OBJ_DIR)/hal/libpqcphal.a: $(call objs,$(LIBHAL_SRC))
 

@@ -13,14 +13,30 @@
 extern int main();
 
 /*NOTE: refer to esp-idf/components/bootloader/subproject/main/ld/esp32c3/bootloader.ld*/
-extern int _bss_start;
-extern int _bss_end;
-extern int bootloader_usable_dram_end; /* start of the stack */
-static char *stack_start = &bootloader_usable_dram_end;
+extern char _stack_bottom; /* start of the stack */
+static char *stack_start = &_stack_bottom;
 static systimer_hal_context_t hal_ctx;
 
 extern int uart_tx_one_char(uint8_t c);
 void hal_setup(const enum clock_mode clock) {
+    wdt_hal_context_t wdt0_context = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
+    wdt_hal_write_protect_disable(&wdt0_context);
+    wdt_hal_disable(&wdt0_context);
+    wdt_hal_set_flashboot_en(&wdt0_context, false);
+
+    wdt_hal_context_t rwdt_context = RWDT_HAL_CONTEXT_DEFAULT();
+    wdt_hal_write_protect_disable(&rwdt_context);
+    wdt_hal_disable(&rwdt_context);
+    wdt_hal_set_flashboot_en(&rwdt_context, false);
+
+    REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, RTC_CNTL_SWD_WKEY_VALUE);
+    REG_SET_BIT(RTC_CNTL_SWD_CONF_REG, RTC_CNTL_SWD_AUTO_FEED_EN);
+    REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, 0);
+
+    cache_hal_init();
+    cache_hal_is_cache_enabled(CACHE_LL_ID_ALL, CACHE_TYPE_ALL);
+
+    (void)clock;
     systimer_hal_init(&hal_ctx);
     systimer_hal_tick_rate_ops_t ops = {
         .ticks_to_us = systimer_ticks_to_us,
@@ -50,41 +66,17 @@ size_t hal_get_stack_size(void) {
     register char *cur_stack;
     __asm__ volatile ("mv %0, sp" : "=r"(cur_stack));
     return cur_stack - stack_start;
-
 }
 
 void hal_spraystack(void) {}
-size_t hal_checkstack(void) { return 0; }
+size_t hal_checkstack(void) {
+    return 0;
+}
 
-void __attribute__((noreturn)) call_start_cpu0(void) {
-    memset(&_bss_start, 0, (&_bss_end - &_bss_start) * sizeof(_bss_start));
-
-    wdt_hal_context_t wdt0_context = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
-    wdt_hal_write_protect_disable(&wdt0_context);
-    wdt_hal_disable(&wdt0_context);
-    wdt_hal_set_flashboot_en(&wdt0_context, false);
-
-    wdt_hal_context_t rwdt_context = RWDT_HAL_CONTEXT_DEFAULT();
-    wdt_hal_write_protect_disable(&rwdt_context);
-    wdt_hal_disable(&rwdt_context);
-    wdt_hal_set_flashboot_en(&rwdt_context, false);
-
-    REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, RTC_CNTL_SWD_WKEY_VALUE);
-    REG_SET_BIT(RTC_CNTL_SWD_CONF_REG, RTC_CNTL_SWD_AUTO_FEED_EN);
-    REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, 0);
-
-    cache_hal_init();
-    cache_hal_is_cache_enabled(CACHE_LL_ID_ALL, CACHE_TYPE_ALL);
-
-    hal_setup(CLOCK_BENCHMARK);
-
-    char buf[1024];
-    snprintf(buf, 1024, "stack start: %X\n", (int)&bootloader_usable_dram_end);
-    hal_send_str(buf);
-
-    (void) main();
-
-    for (;;) (void) 0;
+void _exit(int) {
+    for (;;) {
+        (void) 0;
+    }
 }
 
 
@@ -165,8 +157,6 @@ void *__wrap__sbrk (int incr) {
     return (void *) prev_heap_end;
 }
 
-struct _reent * __getreent(void)
-{
+struct _reent *__getreent(void) {
     return _impure_ptr;
 }
-
