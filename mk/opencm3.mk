@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
+CROSS_PREFIX := arm-none-eabi-
+include mk/gcc-config.mk
+
 ifeq ($(RNG),NISTKAT)
 	LIBHAL_SRC = \
 		test/common/nistkatrng.c \
@@ -18,7 +21,7 @@ include $(OPENCM3_DIR)/mk/gcc-rules.mk
 
 LIBHAL_SRC += hal/hal-opencm3.c
 
-$(OBJ_DIR)/hal/libhal.a: $(call objs,$(LIBHAL_SRC))
+$(OBJ_DIR)/hal/libpqcphal.a: $(call objs,$(LIBHAL_SRC))
 
 CFLAGS += $(ARCH_FLAGS)
 
@@ -27,4 +30,4 @@ LDFLAGS += \
 	-T$(LDSCRIPT) \
 	$(ARCH_FLAGS)
 
-LINKDEPS += $(LDSCRIPT) $(LIBDEPS)
+LINKDEPS += $(LDSCRIPT)

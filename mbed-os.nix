@@ -2,12 +2,16 @@
 
 { stdenvNoCC
 , fetchFromGitHub
+, writeText
 , targets ? [ ]
 }:
 
 stdenvNoCC.mkDerivation rec {
   pname = "mbed-os";
   version = "e04a55f32b0ac0ead9c1eb0b488a20e4e2617130";
+  setupHook = writeText "setup-hook.sh" ''
+    export MBED_OS_DIR="$1"
+  '';
   src = fetchFromGitHub {
     owner = "ARMmbed";
     repo = pname;

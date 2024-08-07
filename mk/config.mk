@@ -4,15 +4,6 @@ _CONFIG :=
 
 SRCDIR := $(CURDIR)
 
-# GCC config
-CROSS_PREFIX ?= arm-none-eabi
-CC := $(CROSS_PREFIX)-gcc
-CPP := $(CROSS_PREFIX)-cpp
-AR := $(CROSS_PREFIX)-ar
-LD := $(CC)
-OBJCOPY := $(CROSS_PREFIX)-objcopy
-SIZE := $(CROSS_PREFIX)-size
-
 ##############################
 # Include retained variables #
 ##############################
@@ -39,8 +30,9 @@ $(CONFIG):
 # Some Macros #
 ###############
 
-LDLIBS += -lhal -L$(OBJ_DIR)/hal
-LIBDEPS += $(OBJ_DIR)/hal/libhal.a
+LDLIBS += -lpqcphal -L$(OBJ_DIR)/hal
+LIBDEPS += $(OBJ_DIR)/hal/libpqcphal.a
+LINKDEPS += $(LIBDEPS)
 
 # Common config
 objs = $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(1)))
@@ -49,7 +41,7 @@ include mk/$(PLATFORM).mk
 
 CFLAGS += \
 	-O3 \
-	-std=gnu99 \
+	-std=gnu17 \
 	--sysroot=$(SYSROOT) \
 	-Wall -Wextra -Wshadow -Werror \
 	-MMD \

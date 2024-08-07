@@ -116,6 +116,7 @@ class PLATFORM(Enum):
     MPS2_AN500 = 4
     NUCLEO_F207ZG = 5
     MPS2_AN385 = 6
+    ESP32_C3 = 7
 
     def __str__(self):
         return self.name.lower().replace("_", "-")
