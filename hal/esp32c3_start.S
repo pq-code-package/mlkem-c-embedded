@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
     .section .text.entry
     .type _entry, @function
     .global _entry

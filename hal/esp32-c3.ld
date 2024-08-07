@@ -1,4 +1,4 @@
-/*SPDX-License-Identifier: Apache-2.0*/
+/*SPDX-License-Identifier: MIT*/
 MEMORY {
     iflash   (x): org = 0x42000000, len = 0x400000
     dflash   (r): org = 0x3C000000, len = 0x400000
