@@ -93,11 +93,7 @@
           };
 
           devShells.ci = wrapShell pkgs.mkShellNoCC {
-            packages = core ++ arm-pkgs;
-          };
-
-          devShells.ci-riscv = wrapShell pkgs.mkShellNoCC {
-            packages = core ++ riscv-pkgs;
+            packages = core ++ arm-pkgs ++ riscv-pkgs;
           };
         };
       flake = {
