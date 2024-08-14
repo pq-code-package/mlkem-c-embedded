@@ -40,6 +40,7 @@ CFLAGS += \
 	-I$(IDF_PATH)/components/esp_common/include \
 	-I$(IDF_PATH)/components/esp_rom/include/esp32c3 \
 	-I$(IDF_PATH)/components/esp_hw_support/include \
+	-I$(IDF_PATH)/components/riscv/include \
 	-I$(ESP_IDF_LIB)/esp32c3/bootloader/config \
 	$(ARCH_FLAGS) \
 	-fdata-sections -ffunction-sections \

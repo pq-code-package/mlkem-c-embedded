@@ -4,7 +4,10 @@
 #include <hal/wdt_hal.h>
 #include <hal/cache_ll.h>
 #include <hal/cache_hal.h>
+#include <hal/clk_tree_ll.h>
+#include <esp_cpu.h>
 #include <soc/soc.h>
+#include <soc/clk_tree_defs.h>
 #include <esp_private/systimer.h>
 #include <string.h>
 #include <stdint.h>
@@ -18,6 +21,7 @@ static char *stack_start = &_stack_bottom;
 static systimer_hal_context_t hal_ctx;
 
 extern int uart_tx_one_char(uint8_t c);
+
 void hal_setup(const enum clock_mode clock) {
     wdt_hal_context_t wdt0_context = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
     wdt_hal_write_protect_disable(&wdt0_context);
@@ -36,15 +40,20 @@ void hal_setup(const enum clock_mode clock) {
     cache_hal_init();
     cache_hal_is_cache_enabled(CACHE_LL_ID_ALL, CACHE_TYPE_ALL);
 
-    (void)clock;
     systimer_hal_init(&hal_ctx);
-    systimer_hal_tick_rate_ops_t ops = {
-        .ticks_to_us = systimer_ticks_to_us,
-        .us_to_ticks = systimer_us_to_ticks,
-    };
-
-    systimer_hal_set_tick_rate_ops(&hal_ctx, &ops);
     systimer_hal_enable_counter(&hal_ctx, 0);
+
+    clk_ll_cpu_set_src(SOC_CPU_CLK_SRC_PLL);
+    switch (clock) {
+    case CLOCK_BENCHMARK:
+        // TODO: need to check with the datasheet
+        clk_ll_cpu_set_freq_mhz_from_pll(CLK_LL_PLL_80M_FREQ_MHZ);
+        break;
+    case CLOCK_FAST:
+    default:
+        clk_ll_cpu_set_freq_mhz_from_pll(CLK_LL_PLL_160M_FREQ_MHZ);
+        break;
+    }
 };
 
 void hal_send_str(const char *in) {
@@ -59,7 +68,7 @@ void hal_send_str(const char *in) {
 
 /* Reference: what have done in `esp_timer_impl_get_time` in esp_timer/src/esp_timer_impl_systimer.c` */
 uint64_t hal_get_time(void) {
-    return systimer_hal_get_time(&hal_ctx, 0);
+    return esp_cpu_get_cycle_count();
 }
 
 size_t hal_get_stack_size(void) {
