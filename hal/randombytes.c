@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "randombytes.h"
 
+#ifdef RISCV
+#include <bootloader_random.h>
+int randombytes(uint8_t *obuf, size_t len) {
+    bootloader_fill_random(obuf, len);
+
+    return 0;
+}
+
+#else
 #include <libopencm3/stm32/rng.h>
 
 int randombytes(uint8_t *obuf, size_t len) {
@@ -25,3 +34,4 @@ int randombytes(uint8_t *obuf, size_t len) {
 
     return 0;
 }
+#endif

@@ -6,6 +6,7 @@
 #include <hal/cache_hal.h>
 #include <hal/clk_tree_ll.h>
 #include <esp_cpu.h>
+#include <bootloader_random.h>
 #include <soc/soc.h>
 #include <soc/clk_tree_defs.h>
 #include <string.h>
@@ -57,6 +58,8 @@ void hal_setup(const enum clock_mode clock) {
         clk_ll_cpu_set_freq_mhz_from_pll(CLK_LL_PLL_160M_FREQ_MHZ);
         break;
     }
+
+    bootloader_random_enable();
 };
 
 void hal_send_str(const char *in) {
