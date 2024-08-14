@@ -5,10 +5,13 @@
 #include <hal/cache_ll.h>
 #include <hal/cache_hal.h>
 #include <hal/clk_tree_ll.h>
+#include <hal/clk_tree_hal.h>
+#include <hal/uart_ll.h>
 #include <esp_cpu.h>
 #include <bootloader_random.h>
 #include <soc/soc.h>
 #include <soc/clk_tree_defs.h>
+#include <soc/uart_struct.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -20,6 +23,7 @@ extern char _stack_bottom; /* start of the stack */
 static char *stack_start = &_stack_bottom;
 static systimer_hal_context_t hal_ctx;
 
+#define SERIAL_BAUD 38400
 extern int uart_tx_one_char(uint8_t c);
 
 void hal_setup(const enum clock_mode clock) {
@@ -41,6 +45,10 @@ void hal_setup(const enum clock_mode clock) {
 
     cache_hal_init();
     cache_hal_is_cache_enabled(CACHE_LL_ID_ALL, CACHE_TYPE_ALL);
+
+    uart_ll_sclk_enable(UART_LL_GET_HW(UART_NUM_0));
+    uart_ll_set_sclk(UART_LL_GET_HW(UART_NUM_0), SOC_MOD_CLK_APB);
+    uart_ll_set_baudrate(UART_LL_GET_HW(UART_NUM_0), SERIAL_BAUD, CLK_LL_AHB_MAX_FREQ_MHZ * MHZ);
 
     // setup for cycle count
     systimer_hal_init(&hal_ctx);
