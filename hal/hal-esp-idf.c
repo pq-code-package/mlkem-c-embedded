@@ -8,7 +8,6 @@
 #include <esp_cpu.h>
 #include <soc/soc.h>
 #include <soc/clk_tree_defs.h>
-#include <esp_private/systimer.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,6 +22,7 @@ static systimer_hal_context_t hal_ctx;
 extern int uart_tx_one_char(uint8_t c);
 
 void hal_setup(const enum clock_mode clock) {
+    // disable rtc watch dog to avoid chip reset
     wdt_hal_context_t wdt0_context = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
     wdt_hal_write_protect_disable(&wdt0_context);
     wdt_hal_disable(&wdt0_context);
@@ -33,6 +33,7 @@ void hal_setup(const enum clock_mode clock) {
     wdt_hal_disable(&rwdt_context);
     wdt_hal_set_flashboot_en(&rwdt_context, false);
 
+    // disable super watch dog to avoid chip reset
     REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, RTC_CNTL_SWD_WKEY_VALUE);
     REG_SET_BIT(RTC_CNTL_SWD_CONF_REG, RTC_CNTL_SWD_AUTO_FEED_EN);
     REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, 0);
@@ -40,6 +41,7 @@ void hal_setup(const enum clock_mode clock) {
     cache_hal_init();
     cache_hal_is_cache_enabled(CACHE_LL_ID_ALL, CACHE_TYPE_ALL);
 
+    // setup for cycle count
     systimer_hal_init(&hal_ctx);
     systimer_hal_enable_counter(&hal_ctx, 0);
 
@@ -47,6 +49,7 @@ void hal_setup(const enum clock_mode clock) {
     switch (clock) {
     case CLOCK_BENCHMARK:
         // TODO: need to check with the datasheet
+        // max clock frequency for flash
         clk_ll_cpu_set_freq_mhz_from_pll(CLK_LL_PLL_80M_FREQ_MHZ);
         break;
     case CLOCK_FAST:
@@ -66,7 +69,6 @@ void hal_send_str(const char *in) {
 }
 
 
-/* Reference: what have done in `esp_timer_impl_get_time` in esp_timer/src/esp_timer_impl_systimer.c` */
 uint64_t hal_get_time(void) {
     return esp_cpu_get_cycle_count();
 }
