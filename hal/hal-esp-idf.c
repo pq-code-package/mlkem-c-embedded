@@ -19,8 +19,10 @@
 extern int main();
 
 /*NOTE: refer to esp-idf/components/bootloader/subproject/main/ld/esp32c3/bootloader.ld*/
-extern char _stack_bottom; /* start of the stack */
-static char *stack_start = &_stack_bottom;
+extern char _stack_top; /* start of the stack */
+static char *stack_top = &_stack_top;
+extern char _stack_bottom; /* end of the stack */
+static char *stack_bottom = &_stack_bottom;
 static systimer_hal_context_t hal_ctx;
 
 #define SERIAL_BAUD 38400
@@ -87,12 +89,35 @@ uint64_t hal_get_time(void) {
 size_t hal_get_stack_size(void) {
     register char *cur_stack;
     __asm__ volatile ("mv %0, sp" : "=r"(cur_stack));
-    return cur_stack - stack_start;
+    return stack_top - cur_stack;
 }
 
-void hal_spraystack(void) {}
+const uint32_t stackpattern = 0xDEADBEEFlu;
+
+static void *last_sp = NULL;
+
+void hal_spraystack(void) {
+    char *_sb = stack_bottom;
+    asm volatile ("mv %0, sp\n"
+                  ".L%=:\n\t"
+                  "sw %2, (%1)\n\t"
+                  "addi %1, %1, 4\n\t"
+                  "blt %1, %0, .L%=\n\t"
+                  : "+r" (last_sp), "+r" (_sb) : "r" (stackpattern) : "cc", "memory");
+}
+
 size_t hal_checkstack(void) {
-    return 0;
+    size_t result = 0;
+    asm volatile("sub %0, %1, %2\n"
+                 ".L%=:\n\t"
+                 "lw t0, (%2)\n\t"
+                 "addi %2, %2, 4\n\t"
+                 "bne t0, %3, .LE%=\n\t"
+                 "addi %0, %0, -4\n\t"
+                 "blt %2, %1, .L%=\n\t"
+                 ".LE%=:\n"
+                 : "+r"(result) : "r" (last_sp), "r" (stack_bottom), "r" (stackpattern) : "t0", "cc");
+    return result;
 }
 
 void _exit(int) {
@@ -172,11 +197,9 @@ int __wrap__write(int fd, const char *ptr, int len) {
 }
 
 void *__wrap__sbrk (int incr) {
-    char *prev_heap_end;
-    prev_heap_end = stack_start;
-    stack_start += incr;
-
-    return (void *) prev_heap_end;
+    (void) incr;
+    errno = ENOSYS;
+    return NULL;
 }
 
 struct _reent *__getreent(void) {
