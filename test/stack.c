@@ -5,39 +5,15 @@
 #include "sendfn.h"
 
 #include <string.h>
-
-#ifndef MAX_STACK_SIZE
-#define MAX_STACK_SIZE hal_get_stack_size()
-#endif
-
-#ifndef STACK_SIZE_INCR
-#define STACK_SIZE_INCR 0x1000
-#endif
+#include <stdio.h>
 
 #define send_stack_usage(S, U) send_unsigned((S), (U))
-
-unsigned int canary_size;
-volatile unsigned char *p;
-unsigned int c;
-uint8_t canary = 0x42;
 
 unsigned char key_a[CRYPTO_BYTES], key_b[CRYPTO_BYTES];
 unsigned char pk[CRYPTO_PUBLICKEYBYTES];
 unsigned char sendb[CRYPTO_CIPHERTEXTBYTES];
 unsigned char sk_a[CRYPTO_SECRETKEYBYTES];
 unsigned int stack_key_gen, stack_encaps, stack_decaps;
-
-#define FILL_STACK()                                                           \
-    p = &a;                                                                      \
-    while (p > &a - canary_size)                                                 \
-        *(p--) = canary;
-#define CHECK_STACK()                                                          \
-    c = canary_size;                                                             \
-    p = &a - canary_size + 1;                                                    \
-    while (*p == canary && p < &a) {                                             \
-        p++;                                                                       \
-        c--;                                                                       \
-    }
 
 static int test_keys(void) {
     // Alice generates a public key
