@@ -21,6 +21,7 @@ jobs:
         script: |
           astyle --version
           arm-none-eabi-gcc --version
+          riscv32-esp-elf-gcc --version
           qemu-system-arm --version
     - name: Lint
       run: |
@@ -43,6 +44,7 @@ jobs:
 
           export -f make_platform
           tests --list-platforms | grep -v "mps2" | xargs -I {} bash -c 'make_platform "$@" || exit 1' _ {}
+          make_platform "esp32-c3"
 
     - name: Functional test
       id: func_test

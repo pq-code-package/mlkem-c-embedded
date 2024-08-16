@@ -3,6 +3,7 @@
 { lib
 , stdenvNoCC
 , fetchFromGitHub
+, writeText
 , python311
 , gcc-arm-embedded-13
 , targets ? [ ]
@@ -17,6 +18,9 @@ stdenvNoCC.mkDerivation rec {
     rev = "ec5aeba354ec273782e4441440fe9000b1c965e3";
     sha256 = "sha256-bgoMhOhBJZwPTa9gUH0vPSGZknDrb2mJZuFlCWNivYU=";
   };
+  setupHook = writeText "setup-hook.sh" ''
+    export OPENCM3_DIR="$1"
+  '';
   buildInputs = [
     python311
     gcc-arm-embedded-13 # arm-gnu-toolchain-13.2.rel1

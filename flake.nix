@@ -6,25 +6,23 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 
+    esp-dev = {
+      url = "github:mirrexagon/nixpkgs-esp-dev?rev=86a2bbe01fe0258887de7396af2a5eb0e37ac3be";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
   };
 
-  outputs = inputs@{ flake-parts, ... }:
+  outputs = inputs@{ flake-parts, esp-dev, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ ];
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-      perSystem = { pkgs, ... }:
+      perSystem = { pkgs, system, ... }:
         let
-          libopencm3 = pkgs.callPackage ./libopencm3.nix {
-            targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
-          };
-          mbed-os = pkgs.callPackage ./mbed-os.nix {
-            targets = [ "TARGET_MPS2_M3" "TARGET_MPS2_M4" "TARGET_MPS2_M7" ];
-          };
-
           core = builtins.attrValues {
             astyle = pkgs.astyle.overrideAttrs (old: rec {
               version = "3.4.13";
@@ -52,10 +50,20 @@
           };
 
           arm-pkgs = builtins.attrValues {
-            libopencm3 = libopencm3;
-            mbed-os = mbed-os;
+            libopencm3 = pkgs.callPackage ./libopencm3.nix {
+              targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
+            };
+
+            mbed-os = pkgs.callPackage ./mbed-os.nix {
+              targets = [ "TARGET_MPS2_M3" "TARGET_MPS2_M4" "TARGET_MPS2_M7" ];
+            };
+
             inherit (pkgs)
               gcc-arm-embedded-13; # arm-gnu-toolchain-13.2.rel1
+          };
+
+          riscv-pkgs = builtins.attrValues {
+            esp-idf-lib = pkgs.callPackage ./esp-idf-lib.nix { };
           };
 
           wrapShell = mkShell: attrs:
@@ -66,8 +74,15 @@
             });
         in
         {
+          _module.args = {
+            pkgs = import inputs.nixpkgs {
+              inherit system;
+              overlays = [ esp-dev.overlays.default ];
+            };
+          };
+
           devShells.default = wrapShell pkgs.mkShellNoCC {
-            packages = core ++ arm-pkgs ++ builtins.attrValues {
+            packages = core ++ arm-pkgs ++ riscv-pkgs ++ builtins.attrValues {
               inherit (pkgs)
                 direnv
                 nix-direnv
@@ -75,14 +90,10 @@
                 # debug dependencies
                 openocd; # 0.12.0
             };
-            OPENCM3_DIR = ''${libopencm3}'';
-            MBED_OS_DIR = ''${mbed-os}'';
           };
 
           devShells.ci = wrapShell pkgs.mkShellNoCC {
-            packages = core ++ arm-pkgs;
-            OPENCM3_DIR = ''${libopencm3}'';
-            MBED_OS_DIR = ''${mbed-os}'';
+            packages = core ++ arm-pkgs ++ riscv-pkgs;
           };
         };
       flake = {
