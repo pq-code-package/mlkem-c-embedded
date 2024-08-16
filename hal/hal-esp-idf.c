@@ -25,7 +25,7 @@ extern char _stack_bottom; /* end of the stack */
 static char *stack_bottom = &_stack_bottom;
 static systimer_hal_context_t hal_ctx;
 
-#define SERIAL_BAUD 38400
+#define SERIAL_BAUD 115200
 extern int uart_tx_one_char(uint8_t c);
 
 void hal_setup(const enum clock_mode clock) {
