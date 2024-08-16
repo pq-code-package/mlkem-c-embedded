@@ -1,7 +1,7 @@
 /*SPDX-License-Identifier: MIT*/
 MEMORY {
-    iflash   (x): org = 0x42000000, len = 0x400000
-    dflash   (r): org = 0x3C000000, len = 0x400000
+    irom   (x): org = 0x42000000, len = 0x400000
+    drom   (r): org = 0x3C000000, len = 0x400000
     sram    (rw): org = 0x3FC80000, len = 0x50000
     rtc_ram (rx): org = 0x50000000, len = 0x2000
 }
@@ -9,27 +9,33 @@ MEMORY {
 ENTRY(_start)
 
 SECTIONS {
-  .header : AT(0)
+  .header (READONLY): AT(0)
   {
     _iflash_start = .;
     LONG(0xaedb041d)
     LONG(0xaedb041d)
-  } > iflash
+  } > irom
 
   .text.entry : {
     KEEP(*(.text.entry))
-  } > iflash
+  } > irom
 
   .text : {
     *(.text .stub .text.* .gnu.linkonce.t.*)
-  } > iflash
+  } > irom
+
+  .iram : {
+    *(.iram .iram*)
+  } > irom
+
   _iflash_end = .;
   _iflash_size = _iflash_end - _iflash_start;
 
-  _dflash_start = ORIGIN(dflash) + _iflash_size;
+  _dflash_start = ORIGIN(drom) + _iflash_size;
   .rodata _dflash_start : AT(_iflash_size) {
     *(.rodata .rodata* .srodata .srodata* .sdata2 .sdata2* .gnu.linkonce.r.*)
-  } > dflash
+  } > drom
+
   _dflash_end = .;
   _dflash_size = _dflash_end - _dflash_start;
 
@@ -41,9 +47,9 @@ SECTIONS {
   .sdata : {
     _sdata_start = .;
     *(.sdata .sdata.* .gnu.linkonce.s.*)
-  }
+  } > sram
   _data_end = .;
-  _data_lma_start = ORIGIN(dflash) + LOADADDR(.data);
+  _data_lma_start = ORIGIN(drom) + LOADADDR(.data);
 
   .bss : {
     _bss_start = .;
