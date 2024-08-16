@@ -41,7 +41,7 @@ include mk/$(PLATFORM).mk
 
 CFLAGS += \
 	-O3 \
-	-std=gnu17 \
+	-std=gnu99 \
 	--sysroot=$(SYSROOT) \
 	-Wall -Wextra -Wshadow -Werror \
 	-MMD \

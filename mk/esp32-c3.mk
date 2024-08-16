@@ -24,13 +24,8 @@ endif
 
 LIBHAL_SRC += hal/hal-esp-idf.c hal/esp32c3_start.S
 
-$(OBJ_DIR)/hal/libpqcphal.a: $(call objs,$(LIBHAL_SRC))
-
-ARCH_FLAGS += -march=rv32imc_zicsr_zifencei 
-
-CPPFLAGS += -DRISCV -DESP32C3
-
-CFLAGS += \
+$(OBJ_DIR)/hal/libpqcphal.a: CFLAGS += \
+	-std=gnu17 \
 	-I$(IDF_PATH)/components/soc/include \
 	-I$(IDF_PATH)/components/soc/esp32c3/include \
 	-I$(IDF_PATH)/components/esp_rom/include \
@@ -42,7 +37,15 @@ CFLAGS += \
 	-I$(IDF_PATH)/components/esp_hw_support/include \
 	-I$(IDF_PATH)/components/bootloader_support/include \
 	-I$(IDF_PATH)/components/riscv/include \
-	-I$(ESP_IDF_LIB)/esp32c3/bootloader/config \
+	-I$(ESP_IDF_LIB)/esp32c3/bootloader/config
+
+$(OBJ_DIR)/hal/libpqcphal.a: $(call objs,$(LIBHAL_SRC))
+
+ARCH_FLAGS += -march=rv32imc_zicsr_zifencei
+
+CPPFLAGS += -DRISCV -DESP32C3
+
+CFLAGS += \
 	$(ARCH_FLAGS) \
 	-fdata-sections -ffunction-sections \
 	-nostartfiles -Og
