@@ -2,9 +2,9 @@
 #include "randombytes.h"
 
 #ifdef RISCV
-#include <bootloader_random.h>
+#include <esp_random.h>
 int randombytes(uint8_t *obuf, size_t len) {
-    bootloader_fill_random(obuf, len);
+    esp_fill_random(obuf, len);
 
     return 0;
 }
