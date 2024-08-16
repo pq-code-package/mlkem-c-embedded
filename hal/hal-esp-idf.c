@@ -59,7 +59,6 @@ void hal_setup(const enum clock_mode clock) {
     clk_ll_cpu_set_src(SOC_CPU_CLK_SRC_PLL);
     switch (clock) {
     case CLOCK_BENCHMARK:
-        // TODO: need to check with the datasheet
         // max clock frequency for flash
         clk_ll_cpu_set_freq_mhz_from_pll(CLK_LL_PLL_80M_FREQ_MHZ);
         break;
