@@ -51,7 +51,7 @@
 
           arm-pkgs = builtins.attrValues {
             libopencm3 = pkgs.callPackage ./libopencm3.nix {
-              targets = [ "stm32/f2" "stm32/f4" "stm32/f7" ];
+              targets = [ "stm32/f2" "stm32/f4" "stm32/f7" "stm32/l4" ];
             };
 
             mbed-os = pkgs.callPackage ./mbed-os.nix {

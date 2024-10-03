@@ -116,6 +116,7 @@ class PLATFORM(Enum):
     MPS2_AN500 = 4
     NUCLEO_F207ZG = 5
     MPS2_AN385 = 6
+    NUCLEO_L4R5ZI = 7
 
     def __str__(self):
         return self.name.lower().replace("_", "-")
@@ -153,6 +154,10 @@ platform_map = RecursiveNamespace(
         f"{PLATFORM.MPS2_AN386}": {},
         f"{PLATFORM.MPS2_AN385}": {},
         f"{PLATFORM.MPS2_AN500}": {},
+        f"{PLATFORM.NUCLEO_L4R5ZI}": {
+            "openocd_cfg": f"{ROOT}/hal/nucleo_l4r5.cfg",
+        },
+
     }
 )
 
