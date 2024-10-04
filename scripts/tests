@@ -157,7 +157,6 @@ platform_map = RecursiveNamespace(
         f"{PLATFORM.NUCLEO_L4R5ZI}": {
             "openocd_cfg": f"{ROOT}/hal/nucleo_l4r5.cfg",
         },
-
     }
 )
 
