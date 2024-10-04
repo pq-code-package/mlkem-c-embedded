@@ -11,12 +11,12 @@
 
 stdenvNoCC.mkDerivation rec {
   pname = "libopencm3";
-  version = "ec5aeba354ec273782e4441440fe9000b1c965e3";
+  version = "228f28fa66b672535663aa9aa4d12ede8b1a8fc5";
   src = fetchFromGitHub {
     owner = "libopencm3";
     repo = pname;
-    rev = "ec5aeba354ec273782e4441440fe9000b1c965e3";
-    sha256 = "sha256-bgoMhOhBJZwPTa9gUH0vPSGZknDrb2mJZuFlCWNivYU=";
+    rev = "228f28fa66b672535663aa9aa4d12ede8b1a8fc5";
+    sha256 = "sha256-eqjOtvH+FwRaWqVSxUyK/gXtveEipLsyjd4jLzXbzbw=";
   };
   setupHook = writeText "setup-hook.sh" ''
     export OPENCM3_DIR="$1"
@@ -25,8 +25,15 @@ stdenvNoCC.mkDerivation rec {
     python311
     gcc-arm-embedded-13 # arm-gnu-toolchain-13.2.rel1
   ];
+  devicesPatch = writeText "devices-patch.txt" ''
+    # Device otherwise missing from OpenCM3
+    stm32l4r5zi stm32l4 ROM=2048K RAM=256K RAM3=384K
+  '';
   postPatch = ''
     patchShebangs --build scripts/irq2nvic_h
+
+    # Apply the patch to devices.data
+    cat ${devicesPatch} >> ld/devices.data
   '';
   dontConfigure = true;
   buildPhase = ''
